@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 NODE_VERSION=20 next build && npx @cloudflare/next-on-pages@latest",
+    "build": "npx @opennextjs/cloudflare@latest build",
     "start": "next start",
     "lint": "next lint"
   },
