@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:pages": "npx @opennextjs/cloudflare@latest build --dangerouslyUseUnsupportedNextVersion",
+    "build:pages": "npx @opennextjs/cloudflare@latest build --dangerouslyUseUnsupportedNextVersion && npx wrangler deploy",
     "start": "next start",
     "lint": "next lint"
   },
