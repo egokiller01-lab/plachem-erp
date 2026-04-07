@@ -27,37 +27,113 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div style={{ marginBottom: '40px', padding: '0 8px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>Plachem ERP</h2>
-        <span style={{ fontSize: '12px', opacity: 0.7 }}>v1.0.0</span>
+      <div style={{ marginBottom: '48px', padding: '0 12px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '4px'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #4F46E5, #818CF8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '18px'
+          }}>
+            P
+          </div>
+          <h2 style={{ 
+            fontSize: '22px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(to right, #ffffff, #94A3B8)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em'
+          }}>
+            Plachem
+          </h2>
+        </div>
+        <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '500', marginLeft: '44px' }}>ERP System v1.1.0</span>
       </div>
 
       <nav style={{ flex: 1 }}>
         <ul style={{ listStyle: 'none' }}>
-          {menuItems.map((item) => (
-            <li key={item.path} style={{ marginBottom: '4px' }}>
-              <Link
-                href={item.path}
-                className="btn btn-ghost"
-                style={{
-                  width: '100%',
-                  justifyContent: 'flex-start',
-                  backgroundColor: pathname === item.path ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                  color: pathname === item.path ? 'white' : '#94a3b8',
-                }}
-              >
-                {item.name}
-              </Link>
-            </li>
-          ))}
+          {menuItems.map((item) => {
+            const isActive = pathname === item.path;
+            return (
+              <li key={item.path} style={{ marginBottom: '6px' }}>
+                <Link
+                  href={item.path}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    fontWeight: isActive ? '600' : '500',
+                    fontSize: '15px',
+                    color: isActive ? '#FFFFFF' : '#94A3B8',
+                    backgroundColor: isActive ? 'var(--primary)' : 'transparent',
+                    boxShadow: isActive ? '0 4px 12px rgba(79, 70, 229, 0.4)' : 'none',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'var(--sidebar-active)';
+                      e.currentTarget.style.color = '#F8FAFC';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#94A3B8';
+                    }
+                  }}
+                >
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+      <div style={{ 
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)', 
+        paddingTop: '24px',
+        marginTop: '24px'
+      }}>
         <button
           onClick={handleLogout}
-          className="btn btn-ghost"
-          style={{ width: '100%', justifyContent: 'flex-start', color: '#ef4444' }}
+          style={{ 
+            width: '100%', 
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start', 
+            color: '#FCA5A5',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '15px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+            e.currentTarget.style.color = '#EF4444';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = '#FCA5A5';
+          }}
         >
           로그아웃
         </button>
