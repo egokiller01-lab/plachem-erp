@@ -1,3 +1,4 @@
+# Build trigger commit to apply dashboard setting changes
 name = "plachem-erp"
 main = ".open-next/worker.js"
 compatibility_date = "2024-09-23"
