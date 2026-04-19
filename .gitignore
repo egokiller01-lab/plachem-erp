@@ -12,3 +12,9 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 .vscode
+
+# Analysis outputs & temporary files
+erp_data_analysis.json
+excel_analysis.json
+analyze_*.ps1
+summarize_json.ps1

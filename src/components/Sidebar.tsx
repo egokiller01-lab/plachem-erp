@@ -5,15 +5,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 const menuItems = [
-  { name: '대시보드', path: '/' },
-  { name: '거래처 관리', path: '/customers' },
-  { name: '제품 관리', path: '/products' },
-  { name: '단가 관리', path: '/prices' },
-  { name: '구매 입고', path: '/purchase' },
-  { name: '판매 출고', path: '/sales' },
-  { name: '생산 관리', path: '/production' },
-  { name: '재고 현황', path: '/inventory' },
-  { name: '재고 이력', path: '/inventory/history' },
+  { name: 'Dashboard', path: '/' },
+  { name: 'Customers', path: '/customers' },
+  { name: 'Products', path: '/products' },
+  { name: 'Prices', path: '/prices' },
+  { name: 'Purchase', path: '/purchase' },
+  { name: 'Sales', path: '/sales' },
+  { name: 'Production', path: '/production' },
+  { name: 'BOM Management', path: '/products/bom' },
+  { name: 'Accounting (AP)', path: '/accounting/ap' },
+  { name: 'Accounting (AR)', path: '/accounting/ar' },
+  { name: 'Accounting (Ledger)', path: '/accounting/ledger' },
+  { name: 'Daily Cash Report', path: '/accounting/daily-report' },
+  { name: 'Periodic Trend', path: '/accounting/trend-report' },
+  { name: 'Profit & Loss', path: '/accounting/profit-loss' },
+  { name: 'Expenses', path: '/accounting/expenses' },
+  { name: 'Customer Profit', path: '/accounting/customer-profit' },
+  { name: 'Aging Analysis', path: '/accounting/aging-report' },
+  { name: 'Credit Approvals', path: '/admin/credit-approvals' },
+  { name: 'Inventory', path: '/inventory' },
+  { name: 'Inventory History', path: '/inventory/history' },
 ];
 
 export default function Sidebar() {
@@ -135,7 +146,7 @@ export default function Sidebar() {
             e.currentTarget.style.color = '#FCA5A5';
           }}
         >
-          로그아웃
+          Logout
         </button>
       </div>
     </aside>

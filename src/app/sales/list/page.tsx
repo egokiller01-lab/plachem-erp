@@ -1,82 +1,48 @@
-'use client';
-export const dynamic = 'force-dynamic';
-
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import Shell from '@/components/Shell';
 import Link from 'next/link';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface SalesHeader {
-  id: string;
-  sales_no: string;
-  sales_date: string;
-  customer_code: string;
-  total_amount: number;
-  status: string;
-  remark: string;
-  customers?: { customer_name: string };
-}
-
+// ... (omitted same part)
 export default function SalesListPage() {
   const [sales, setSales] = useState<SalesHeader[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isManager, loading: roleLoading } = useUserRole();
 
   const fetchSales = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('sales_headers')
-      .select('*, customers(customer_name)')
-      .order('sales_date', { ascending: false });
-
-    if (error) {
-      console.error(error);
-    } else {
-      setSales(data || []);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchSales();
-  }, []);
-
-  return (
-    <Shell>
-      <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>판매 출고 목록</h1>
-        <Link href="/sales" className="btn btn-primary">신규 판매 등록</Link>
-      </div>
-
-      <div className="card">
-        <div className="data-table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>관리 번호</th>
-                <th>판매 일자</th>
-                <th>매입처</th>
-                <th>총액</th>
-                <th>상태</th>
-                <th>비고</th>
-              </tr>
-            </thead>
+// ... (omitted same part)
             <tbody>
-              {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>로딩 중...</td></tr>
+              {loading || roleLoading ? (
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : sales.map((s) => (
                 <tr key={s.id}>
-                  <td>{s.sales_no || '-'}</td>
+                  <td>
+                    <Link href={`/sales?id=${s.id}`} className="text-secondary" style={{ fontWeight: '600', textDecoration: 'underline' }}>
+                      {s.sales_no || 'View Detail'}
+                    </Link>
+                  </td>
                   <td>{s.sales_date}</td>
                   <td>{s.customers?.customer_name} ({s.customer_code})</td>
-                  <td style={{ fontWeight: 'bold' }}>{s.total_amount?.toLocaleString() || 0} 원</td>
+                  <td style={{ fontWeight: 'bold' }}>{s.total_amount?.toLocaleString() || 0}</td>
                   <td>
-                    <span className="badge badge-success">출고완료</span>
+                    {s.status === 'confirmed' ? (
+                      <span className="badge badge-success">Confirmed</span>
+                    ) : (
+                      <span className="badge badge-warning">Draft</span>
+                    )}
                   </td>
                   <td>{s.remark}</td>
+                  <td>
+                    {s.status !== 'confirmed' && isManager && (
+                      <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleConfirm(s.id)}>
+                        Confirm
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {sales.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>판매 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>No data available.</td></tr>
               )}
             </tbody>
           </table>

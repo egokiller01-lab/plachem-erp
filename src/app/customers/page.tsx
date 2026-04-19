@@ -15,6 +15,8 @@ interface Customer {
   contact_person: string;
   status: 'active' | 'inactive';
   remark: string;
+  credit_limit: number;
+  is_credit_unlimited: boolean;
 }
 
 export default function CustomersPage() {
@@ -35,6 +37,8 @@ export default function CustomersPage() {
     contact_person: '',
     status: 'active' as 'active' | 'inactive',
     remark: '',
+    credit_limit: 0,
+    is_credit_unlimited: false,
   });
 
   const fetchCustomers = async () => {
@@ -63,6 +67,8 @@ export default function CustomersPage() {
       contact_person: customer.contact_person,
       status: customer.status,
       remark: customer.remark,
+      credit_limit: customer.credit_limit || 0,
+      is_credit_unlimited: customer.is_credit_unlimited || false,
     });
     setShowForm(true);
   };
@@ -95,6 +101,8 @@ export default function CustomersPage() {
       contact_person: '',
       status: 'active',
       remark: '',
+      credit_limit: 0,
+      is_credit_unlimited: false,
     });
     fetchCustomers();
   };
@@ -107,7 +115,7 @@ export default function CustomersPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>거래처 관리</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Customers</h1>
         <button 
           className="btn btn-primary"
           onClick={() => {
@@ -115,7 +123,7 @@ export default function CustomersPage() {
             setShowForm(true);
           }}
         >
-          거래처 등록
+          Add Customer
         </button>
       </div>
 
@@ -123,7 +131,7 @@ export default function CustomersPage() {
         <div className="flex-between" style={{ gap: '16px' }}>
           <input 
             type="text" 
-            placeholder="거래처명 또는 코드 검색..." 
+            placeholder="Search customer name or code..." 
             className="form-control"
             style={{ maxWidth: '300px' }}
             value={searchQuery}
@@ -134,19 +142,19 @@ export default function CustomersPage() {
               className={`btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setFilterStatus('all')}
             >
-              전체
+              All
             </button>
             <button 
               className={`btn ${filterStatus === 'active' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setFilterStatus('active')}
             >
-              사용중
+              Active
             </button>
             <button 
               className={`btn ${filterStatus === 'inactive' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setFilterStatus('inactive')}
             >
-              미사용
+              Inactive
             </button>
           </div>
         </div>
@@ -154,11 +162,11 @@ export default function CustomersPage() {
 
       {showForm && (
         <div className="card mb-24">
-          <h3 style={{ marginBottom: '24px' }}>{editingId ? '거래처 수정' : '새 거래처 등록'}</h3>
+          <h3 style={{ marginBottom: '24px' }}>{editingId ? 'Edit Customer' : 'New Customer'}</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">거래처 코드 *</label>
+                <label className="form-label">Customer Code *</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -168,7 +176,7 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">거래처명 *</label>
+                <label className="form-label">Customer Name *</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -180,7 +188,7 @@ export default function CustomersPage() {
             </div>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">사업자 번호</label>
+                <label className="form-label">Business No</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -189,7 +197,7 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">전화번호</label>
+                <label className="form-label">Phone</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -199,7 +207,7 @@ export default function CustomersPage() {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">주소</label>
+              <label className="form-label">Address</label>
               <input 
                 type="text" 
                 className="form-control" 
@@ -209,7 +217,27 @@ export default function CustomersPage() {
             </div>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">담당자</label>
+                <label className="form-label">Credit Limit (여신한도)</label>
+                <input 
+                  type="number" 
+                  className="form-control" 
+                  value={formData.credit_limit} 
+                  onChange={(e) => setFormData({...formData, credit_limit: Number(e.target.value)})}
+                  placeholder="0 = Cash Only"
+                />
+              </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '32px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.is_credit_unlimited} 
+                  onChange={(e) => setFormData({...formData, is_credit_unlimited: e.target.checked})}
+                />
+                <label className="form-label" style={{ marginBottom: 0 }}>Unlimited Credit (무제한)</label>
+              </div>
+            </div>
+            <div className="grid-cols-2">
+              <div className="form-group">
+                <label className="form-label">Contact Person</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -218,19 +246,19 @@ export default function CustomersPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">상태</label>
+                <label className="form-label">Status</label>
                 <select 
                   className="form-control" 
                   value={formData.status} 
                   onChange={(e) => setFormData({...formData, status: e.target.value as any})}
                 >
-                  <option value="active">Active (사용)</option>
-                  <option value="inactive">Inactive (미사용)</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">비고</label>
+              <label className="form-label">Remark</label>
               <textarea 
                 className="form-control" 
                 value={formData.remark} 
@@ -238,9 +266,8 @@ export default function CustomersPage() {
               />
             </div>
             <div className="flex-between" style={{ marginTop: '32px' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>취소</button>
-              <button type="submit" className="btn btn-primary" disabled={formLoading}>
-                {formLoading ? '저장 중...' : '저장하기'}
+              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+                {formLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>
@@ -252,17 +279,17 @@ export default function CustomersPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>코드</th>
-                <th>거래처명</th>
-                <th>담당자</th>
-                <th>전화번호</th>
-                <th>상태</th>
-                <th>작업</th>
+                <th>Code</th>
+                <th>Customer Name</th>
+                <th>Contact</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>로딩 중...</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : filteredCustomers.map((customer) => (
                 <tr key={customer.id}>
                   <td>{customer.customer_code}</td>
@@ -271,16 +298,16 @@ export default function CustomersPage() {
                   <td>{customer.phone}</td>
                   <td>
                     <span className={`badge ${customer.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
-                      {customer.status === 'active' ? '사용중' : '미사용'}
+                      {customer.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-ghost" onClick={() => handleEdit(customer)}>수정</button>
+                    <button className="btn btn-ghost" onClick={() => handleEdit(customer)}>Edit</button>
                   </td>
                 </tr>
               ))}
               {filteredCustomers.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>검색 결과가 없습니다.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>No results found.</td></tr>
               )}
             </tbody>
           </table>

@@ -19,10 +19,10 @@ interface Transaction {
 }
 
 const txnTypeLabels: Record<string, string> = {
-  'PURCHASE': '구매 입고',
-  'SALES': '판매 출고',
-  'PROD_INPUT': '생산 투입',
-  'PROD_OUTPUT': '생산 완제품',
+  'PURCHASE': 'Purchase',
+  'SALES': 'Sales',
+  'PROD_INPUT': 'Production Input',
+  'PROD_OUTPUT': 'Production Output',
 };
 
 export default function InventoryHistoryPage() {
@@ -57,8 +57,8 @@ export default function InventoryHistoryPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>재고 이력 조회</h1>
-        <button className="btn btn-ghost" onClick={fetchHistory}>조회</button>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Inventory History</h1>
+        <button className="btn btn-ghost" onClick={fetchHistory}>Search</button>
       </div>
 
       <div className="card mb-24">
@@ -85,7 +85,7 @@ export default function InventoryHistoryPage() {
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
-              <option value="all">전체 거래 유형</option>
+              <option value="all">All Transaction Types</option>
               {Object.entries(txnTypeLabels).map(([val, label]) => (
                 <option key={val} value={val}>{label}</option>
               ))}
@@ -99,18 +99,18 @@ export default function InventoryHistoryPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>일자</th>
-                <th>유형</th>
-                <th>제품명 (코드)</th>
-                <th style={{ textAlign: 'right' }}>입고 (+)</th>
-                <th style={{ textAlign: 'right' }}>출고 (-)</th>
-                <th>참조</th>
-                <th>비고</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Product Name (Code)</th>
+                <th style={{ textAlign: 'right' }}>In (+)</th>
+                <th style={{ textAlign: 'right' }}>Out (-)</th>
+                <th>Ref</th>
+                <th>Remark</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>데이터 로드 중...</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : history.map((item) => (
                 <tr key={item.id}>
                   <td>{item.txn_date}</td>
@@ -133,7 +133,7 @@ export default function InventoryHistoryPage() {
                 </tr>
               ))}
               {history.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>이력 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>No history data available.</td></tr>
               )}
             </tbody>
           </table>

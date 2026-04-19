@@ -58,12 +58,12 @@ export default function LoginPage() {
       <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
         <h1 style={{ marginBottom: '8px', fontSize: '24px' }}>Plachem ERP</h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: '32px' }}>
-          계정에 로그인하여 업무를 시작하세요.
+          Sign in to your account to start working.
         </p>
 
         <form onSubmit={(e) => e.preventDefault()}>
           <div className="form-group">
-            <label className="form-label">이메일</label>
+            <label className="form-label">Email</label>
             <input
               type="email"
               className="form-control"
@@ -75,7 +75,7 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">비밀번호</label>
+            <label className="form-label">Password</label>
             <input
               type="password"
               className="form-control"
@@ -107,7 +107,7 @@ export default function LoginPage() {
               style={{ flex: 1, justifyContent: 'center' }}
               disabled={loading}
             >
-              로그인
+              Sign In
             </button>
             <button
               onClick={handleSignUp}
@@ -116,7 +116,7 @@ export default function LoginPage() {
               style={{ flex: 1, justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#1e293b' }}
               disabled={loading}
             >
-              회원가입
+              Sign Up
             </button>
           </div>
         </form>

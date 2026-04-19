@@ -89,38 +89,38 @@ export default function PriceManagementPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>고객별 거래 단가 관리</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Price Management</h1>
         <button className="btn btn-primary" onClick={() => { setEditingId(null); setShowForm(true); }}>
-          단가 등록
+          Add Price
         </button>
       </div>
 
       {showForm && (
         <div className="card mb-24">
-          <h3 style={{ marginBottom: '24px' }}>{editingId ? '단가 수정' : '새 단가 등록'}</h3>
+          <h3 style={{ marginBottom: '24px' }}>{editingId ? 'Edit Price' : 'New Price Registration'}</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">거래처 선택 *</label>
+                <label className="form-label">Select Customer *</label>
                 <select 
                   className="form-control" 
                   value={formData.customer_code} 
                   onChange={(e) => setFormData({...formData, customer_code: e.target.value})} 
                   required
                 >
-                  <option value="">거래처 선택</option>
+                  <option value="">Select Customer</option>
                   {customers.map(c => <option key={c.customer_code} value={c.customer_code}>{c.customer_name} ({c.customer_code})</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">제품 선택 *</label>
+                <label className="form-label">Select Product *</label>
                 <select 
                   className="form-control" 
                   value={formData.product_code} 
                   onChange={(e) => setFormData({...formData, product_code: e.target.value})} 
                   required
                 >
-                  <option value="">제품 선택</option>
+                  <option value="">Select Product</option>
                   {products.map(p => <option key={p.product_code} value={p.product_code}>{p.product_name} ({p.product_code})</option>)}
                 </select>
               </div>
@@ -128,7 +128,7 @@ export default function PriceManagementPage() {
 
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">단가 *</label>
+                <label className="form-label">Unit Price *</label>
                 <input 
                   type="number" 
                   className="form-control" 
@@ -145,7 +145,7 @@ export default function PriceManagementPage() {
 
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">적용 시작일 *</label>
+                <label className="form-label">Valid From *</label>
                 <input 
                   type="date" 
                   className="form-control" 
@@ -155,7 +155,7 @@ export default function PriceManagementPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">적용 종료일 *</label>
+                <label className="form-label">Valid To *</label>
                 <input 
                   type="date" 
                   className="form-control" 
@@ -167,7 +167,7 @@ export default function PriceManagementPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">비고</label>
+              <label className="form-label">Remark</label>
               <textarea 
                 className="form-control" 
                 value={formData.remark} 
@@ -176,8 +176,8 @@ export default function PriceManagementPage() {
             </div>
 
             <div className="flex-between" style={{ marginTop: '32px' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>취소</button>
-              <button type="submit" className="btn btn-primary">저장하기</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Save</button>
             </div>
           </form>
         </div>
@@ -188,31 +188,31 @@ export default function PriceManagementPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>거래처</th>
-                <th>제품명</th>
-                <th>단가</th>
-                <th>적용 기간</th>
-                <th>비고</th>
-                <th>작업</th>
+                <th>Customer</th>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Valid Period</th>
+                <th>Remark</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>로딩 중...</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : prices.map((p) => (
                 <tr key={p.id}>
                   <td>{p.customers?.customer_name} ({p.customer_code})</td>
                   <td>{p.products?.product_name} ({p.product_code})</td>
-                  <td style={{ fontWeight: 'bold' }}>{p.price.toLocaleString()} 원</td>
+                  <td style={{ fontWeight: 'bold' }}>{p.price.toLocaleString()}</td>
                   <td style={{ fontSize: '13px' }}>{p.valid_from} ~ {p.valid_to}</td>
                   <td>{p.remark}</td>
                   <td>
-                    <button className="btn btn-ghost" onClick={() => handleEdit(p)}>수정</button>
+                    <button className="btn btn-ghost" onClick={() => handleEdit(p)}>Edit</button>
                   </td>
                 </tr>
               ))}
               {prices.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>데이터가 없습니다.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>No data available.</td></tr>
               )}
             </tbody>
           </table>

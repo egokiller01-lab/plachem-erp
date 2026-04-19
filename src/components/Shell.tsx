@@ -39,7 +39,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         height: '100vh',
         backgroundColor: 'var(--bg-app)'
       }}>
-        <div style={{ color: 'var(--text-muted)' }}>초기화 중...</div>
+        <div style={{ color: 'var(--text-muted)' }}>Initializing...</div>
       </div>
     );
   }

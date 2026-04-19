@@ -19,10 +19,10 @@ interface Product {
 }
 
 const productTypeLabels = {
-  raw_material: '원자재',
-  sub_material: '부자재',
-  finished_goods: '제품',
-  trading_goods: '상품',
+  raw_material: 'Raw Material',
+  sub_material: 'Sub Material',
+  finished_goods: 'Finished Goods',
+  trading_goods: 'Trading Goods',
 };
 
 export default function ProductsPage() {
@@ -121,7 +121,7 @@ export default function ProductsPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>제품 관리</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Products</h1>
         <button 
           className="btn btn-primary"
           onClick={() => {
@@ -129,7 +129,7 @@ export default function ProductsPage() {
             setShowForm(true);
           }}
         >
-          제품 등록
+          Add Product
         </button>
       </div>
 
@@ -137,7 +137,7 @@ export default function ProductsPage() {
         <div className="flex-between" style={{ gap: '16px' }}>
           <input 
             type="text" 
-            placeholder="제품명 또는 코드 검색..." 
+            placeholder="Search product name or code..." 
             className="form-control"
             style={{ maxWidth: '300px' }}
             value={searchQuery}
@@ -150,7 +150,7 @@ export default function ProductsPage() {
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
-              <option value="all">전체 유형</option>
+              <option value="all">All Types</option>
               {Object.entries(productTypeLabels).map(([val, label]) => (
                 <option key={val} value={val}>{label}</option>
               ))}
@@ -161,11 +161,11 @@ export default function ProductsPage() {
 
       {showForm && (
         <div className="card mb-24">
-          <h3 style={{ marginBottom: '24px' }}>{editingId ? '제품 수정' : '새 제품 등록'}</h3>
+          <h3 style={{ marginBottom: '24px' }}>{editingId ? 'Edit Product' : 'New Product'}</h3>
           <form onSubmit={handleSubmit}>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">제품 코드 *</label>
+                <label className="form-label">Product Code *</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -175,7 +175,7 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">제품명 *</label>
+                <label className="form-label">Product Name *</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -187,7 +187,7 @@ export default function ProductsPage() {
             </div>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">유형 *</label>
+                <label className="form-label">Type *</label>
                 <select 
                   className="form-control" 
                   value={formData.product_type} 
@@ -200,7 +200,7 @@ export default function ProductsPage() {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">단위</label>
+                <label className="form-label">Unit</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -212,7 +212,7 @@ export default function ProductsPage() {
             </div>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">기 규격 (Spec)</label>
+                <label className="form-label">Spec</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -221,7 +221,7 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">포장 단위 (Package)</label>
+                <label className="form-label">Package</label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -232,14 +232,14 @@ export default function ProductsPage() {
             </div>
             <div className="grid-cols-2">
               <div className="form-group">
-                <label className="form-label">상태</label>
+                <label className="form-label">Status</label>
                 <select 
                   className="form-control" 
                   value={formData.status} 
                   onChange={(e) => setFormData({...formData, status: e.target.value as any})}
                 >
-                  <option value="active">Active (사용)</option>
-                  <option value="inactive">Inactive (미사용)</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
               <div className="form-group">
@@ -247,7 +247,7 @@ export default function ProductsPage() {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">비고</label>
+              <label className="form-label">Remark</label>
               <textarea 
                 className="form-control" 
                 value={formData.remark} 
@@ -255,9 +255,9 @@ export default function ProductsPage() {
               />
             </div>
             <div className="flex-between" style={{ marginTop: '32px' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>취소</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={formLoading}>
-                {formLoading ? '저장 중...' : '저장하기'}
+                {formLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>
@@ -269,18 +269,18 @@ export default function ProductsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>코드</th>
-                <th>제품명</th>
-                <th>유형</th>
-                <th>규격/포장</th>
-                <th>현재 재고</th>
-                <th>상태</th>
-                <th>작업</th>
+                <th>Code</th>
+                <th>Product Name</th>
+                <th>Type</th>
+                <th>Spec/Package</th>
+                <th>Current Stock</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>로딩 중...</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : filteredProducts.map((product) => (
                 <tr key={product.id}>
                   <td>{product.product_code}</td>
@@ -290,16 +290,16 @@ export default function ProductsPage() {
                   <td style={{ fontWeight: 'bold' }}>{product.stock_qty} {product.unit}</td>
                   <td>
                     <span className={`badge ${product.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
-                      {product.status === 'active' ? '사용중' : '미사용'}
+                      {product.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-ghost" onClick={() => handleEdit(product)}>수정</button>
+                    <button className="btn btn-ghost" onClick={() => handleEdit(product)}>Edit</button>
                   </td>
                 </tr>
               ))}
               {filteredProducts.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>검색 결과가 없습니다.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>No results found.</td></tr>
               )}
             </tbody>
           </table>

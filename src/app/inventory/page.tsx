@@ -16,10 +16,10 @@ interface StockItem {
 }
 
 const productTypeLabels: Record<string, string> = {
-  raw_material: '원자재',
-  sub_material: '부자재',
-  finished_goods: '제품',
-  trading_goods: '상품',
+  raw_material: 'Raw Material',
+  sub_material: 'Sub Material',
+  finished_goods: 'Finished Goods',
+  trading_goods: 'Trading Goods',
 };
 
 export default function InventoryStatusPage() {
@@ -52,15 +52,15 @@ export default function InventoryStatusPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>재고 현황</h1>
-        <button className="btn btn-ghost" onClick={fetchStock}>새로고침</button>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Inventory Status</h1>
+        <button className="btn btn-ghost" onClick={fetchStock}>Refresh</button>
       </div>
 
       <div className="card mb-24">
         <div className="flex-between" style={{ gap: '16px' }}>
           <input 
             type="text" 
-            placeholder="제품명 또는 코드 검색..." 
+            placeholder="Search product name or code..." 
             className="form-control"
             style={{ maxWidth: '300px' }}
             value={searchQuery}
@@ -73,7 +73,7 @@ export default function InventoryStatusPage() {
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
-              <option value="all">전체 유형</option>
+              <option value="all">All Types</option>
               {Object.entries(productTypeLabels).map(([val, label]) => (
                 <option key={val} value={val}>{label}</option>
               ))}
@@ -87,17 +87,17 @@ export default function InventoryStatusPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>코드</th>
-                <th>제품명</th>
-                <th>유형</th>
-                <th>규격 / 포장</th>
-                <th style={{ textAlign: 'right' }}>재고 수량</th>
-                <th>단위</th>
+                <th>Code</th>
+                <th>Product Name</th>
+                <th>Type</th>
+                <th>Spec / Package</th>
+                <th style={{ textAlign: 'right' }}>Stock Qty</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>데이터 로드 중...</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : filteredStock.map((item) => (
                 <tr key={item.product_code}>
                   <td>{item.product_code}</td>
@@ -115,7 +115,7 @@ export default function InventoryStatusPage() {
                 </tr>
               ))}
               {filteredStock.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center' }}>조회 결과가 없습니다.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center' }}>No results found.</td></tr>
               )}
             </tbody>
           </table>
