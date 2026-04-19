@@ -36,8 +36,8 @@ export default function ProductionListPage() {
   return (
     <Shell>
       <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>생산 실적 목록</h1>
-        <Link href="/production" className="btn btn-primary">신규 생산 등록</Link>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Production List</h1>
+        <Link href="/production" className="btn btn-primary">New Entry</Link>
       </div>
 
       <div className="card">
@@ -45,27 +45,27 @@ export default function ProductionListPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>관리 번호</th>
-                <th>생산 일자</th>
-                <th>상태</th>
-                <th>비고</th>
+                <th>Production No</th>
+                <th>Production Date</th>
+                <th>Status</th>
+                <th>Remark</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} style={{ textAlign: 'center' }}>로딩 중...</td></tr>
+                <tr><td colSpan={4} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : productions.map((p) => (
                 <tr key={p.id}>
                   <td>{p.production_no || '-'}</td>
                   <td>{p.production_date}</td>
                   <td>
-                    <span className="badge badge-success">생산완료</span>
+                    <span className="badge badge-success">Completed</span>
                   </td>
                   <td>{p.remark}</td>
                 </tr>
               ))}
               {productions.length === 0 && !loading && (
-                <tr><td colSpan={4} style={{ textAlign: 'center' }}>생산 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={4} style={{ textAlign: 'center' }}>No data available.</td></tr>
               )}
             </tbody>
           </table>
