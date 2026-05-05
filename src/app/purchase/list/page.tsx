@@ -8,14 +8,72 @@ import Link from 'next/link';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface PurchaseHeader {
-// ... (omitted same part)
+  id: number;
+  purchase_no: string;
+  purchase_date: string;
+  customer_code: string;
+  total_amount: number;
+  status: string;
+  remark: string;
+  customers: { customer_name: string };
+  [key: string]: any;
+}
+
 export default function PurchaseListPage() {
   const [purchases, setPurchases] = useState<PurchaseHeader[]>([]);
   const [loading, setLoading] = useState(true);
   const { isManager, loading: roleLoading } = useUserRole();
 
   const fetchPurchases = async () => {
-// ... (omitted same part)
+    try {
+      const { data, error } = await supabase
+        .from('purchase_headers')
+        .select('*, customers(customer_name)')
+        .order('id', { ascending: false });
+      if (error) throw error;
+      setPurchases(data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirm = async (id: number) => {
+    if (!confirm('Are you sure you want to confirm this document?')) return;
+    try {
+      const { error } = await supabase.from('purchase_headers').update({ status: 'confirmed' }).eq('id', id);
+      if (error) throw error;
+      fetchPurchases();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
+
+  return (
+    <Shell>
+      <div className="container" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2>Purchase List</h2>
+          <Link href="/purchase" className="btn btn-primary">New Purchase</Link>
+        </div>
+        <div className="table-responsive">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Remark</th>
+                <th>Action</th>
+              </tr>
+            </thead>
             <tbody>
               {loading || roleLoading ? (
                 <tr><td colSpan={7} style={{ textAlign: 'center' }}>Loading...</td></tr>

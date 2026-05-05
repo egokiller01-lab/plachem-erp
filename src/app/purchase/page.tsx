@@ -1,12 +1,14 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import Shell from '@/components/Shell';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useMemo } from 'react';
+import ProductSelector from '@/components/ProductSelector';
+import ProductDisplay from '@/components/ProductDisplay';
 
 interface PurchaseItem {
   line_no: number;
@@ -22,7 +24,7 @@ interface PurchaseItem {
   remark: string;
 }
 
-export default function PurchaseEntryPage() {
+function PurchaseEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
@@ -56,37 +58,33 @@ export default function PurchaseEntryPage() {
 
   const isConfirmed = useMemo(() => header.status === 'confirmed', [header.status]);
   const canEdit = useMemo(() => {
+    if (!editId) return true; // 신규 생성 시 무조건 작성 허용 (생성자 검증 불가 회피)
     // Draft 상태에서만 수정 가능하며, (관리자/팀장) 또는 (본인 작성)이어야 함
     return header.status === 'draft' && (isAdmin || isManager || header.created_by === userId);
-  }, [header.status, isAdmin, isManager, header.created_by, userId]);
+  }, [editId, header.status, isAdmin, isManager, header.created_by, userId]);
 
   useEffect(() => {
-    const fetchMasters = async () => {
+    const init = async () => {
+      setInitialLoading(true);
       const { data: custData } = await supabase.from('customers').select('*').eq('status', 'active');
       const { data: prodData } = await supabase.from('products').select('*').eq('status', 'active');
       setCustomers(custData || []);
       setProducts(prodData || []);
-    };
-    
-    const fetchExistingData = async () => {
-      if (!editId) {
-        setItems([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, unit_price: 0, net_unit_price: 0, vat_rate: 10, net_amount: 0, vat_amount: 0, amount: 0, remark: '' }]);
-        setInitialLoading(false);
-        return;
-      }
-      setInitialLoading(true);
-      const { data: headData, error: headError } = await supabase.from('purchase_headers').select('*').eq('id', editId).single();
-      if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
-      setHeader(headData);
 
-      const { data: itemData, error: itemError } = await supabase.from('purchase_items').select('*').eq('purchase_header_id', editId).order('line_no', { ascending: true });
-      if (itemError) { alert('Failed to load items'); setInitialLoading(false); return; }
-      setItems(itemData || []);
+      if (editId) {
+        const { data: headData, error: headError } = await supabase.from('purchase_headers').select('*').eq('id', editId).single();
+        if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
+        setHeader(headData);
+
+        const { data: itemData, error: itemError } = await supabase.from('purchase_items').select('*').eq('purchase_header_id', editId).order('line_no', { ascending: true });
+        if (itemError) { alert('Failed to load items'); setInitialLoading(false); return; }
+        setItems(itemData || []);
+      } else {
+        setItems([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, unit_price: 0, net_unit_price: 0, vat_rate: 10, net_amount: 0, vat_amount: 0, amount: 0, remark: '' }]);
+      }
       setInitialLoading(false);
     };
-
-    fetchMasters();
-    fetchExistingData();
+    init();
   }, [editId]);
 
   const handleAddItem = () => {
@@ -102,22 +100,29 @@ export default function PurchaseEntryPage() {
   const handleItemChange = (index: number, field: keyof PurchaseItem, value: any) => {
     if (!canEdit) return;
     const newItems = [...items];
-    const item = { ...newItems[index], [field]: value };
+    const prod = products.find(p => p.id?.toString() === value?.toString());
     
-    if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate') {
-      const net = item.qty * item.net_unit_price;
-      const vat = net * (item.vat_rate / 100);
+    if (field === 'product_code') {
+      if (!prod) return;
+      newItems[index] = { 
+        ...newItems[index], 
+        product_id: prod.id,
+        product_code: prod.product_code || '',
+        qty: newItems[index].qty || 1
+      };
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
+
+    const item = newItems[index];
+    if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate' || field === 'product_code') {
+      const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
+      const vat = net * ((Number(item.vat_rate) || 0) / 100);
       item.net_amount = net;
       item.vat_amount = vat;
       item.amount = net + vat;
     }
     
-    if (field === 'product_code') {
-      const prod = products.find(p => p.product_code === value);
-      item.product_id = prod?.id;
-    }
-    
-    newItems[index] = item;
     setItems(newItems);
   };
 
@@ -168,6 +173,7 @@ export default function PurchaseEntryPage() {
         .from('purchase_headers')
         .insert([{
           ...header,
+          purchase_no: header.purchase_no ? header.purchase_no : undefined,
           total_net_amount: totalNetAmount,
           total_vat_amount: totalVatAmount,
           total_amount: totalAmount,
@@ -272,123 +278,86 @@ export default function PurchaseEntryPage() {
         </div>
       )}
 
-      <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>
+      <div className="flex-between mb-12">
+        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>
           {editId ? (isConfirmed ? 'View Purchase' : 'Edit Purchase') : 'Add Purchase Entry'}
         </h1>
         <div style={{ display: 'flex', gap: '8px' }}>
           {editId && isConfirmed && isAdmin && (
-            <button type="button" className="btn btn-ghost" onClick={handleUnconfirmAction} disabled={loading} style={{ color: 'var(--danger)', border: '1px solid var(--danger)' }}>
+            <button type="button" className="btn btn-ghost" onClick={handleUnconfirmAction} disabled={loading} style={{ color: 'var(--danger)', border: '1px solid var(--danger)', padding: '4px 12px', fontSize: '12px' }}>
               Unconfirm (Admin)
             </button>
           )}
           {editId && !isConfirmed && isManager && (
-            <button type="button" className="btn btn-secondary" onClick={handleConfirmAction} disabled={loading}>
+            <button type="button" className="btn btn-secondary" onClick={handleConfirmAction} disabled={loading} style={{ padding: '4px 12px', fontSize: '12px' }}>
               Confirm Now
             </button>
           )}
-          <button className="btn btn-ghost" onClick={() => router.push('/purchase/list')}>Back to List</button>
+          <button className="btn btn-ghost" onClick={() => router.push('/purchase/list')} style={{ padding: '4px 12px', fontSize: '12px' }}>Back to List</button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="card mb-24">
-          <h3 style={{ marginBottom: '16px' }}>Basic Info</h3>
-          <div className="grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Purchase No</label>
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="Auto-generated or enter manually"
-                value={header.purchase_no}
-                onChange={(e) => setHeader({...header, purchase_no: e.target.value})}
-                readOnly={!canEdit}
-              />
+        <div className="card mb-12" style={{ padding: '12px 16px' }}>
+          <div className="grid-cols-2" style={{ gap: '12px' }}>
+            <div className="grid-cols-2" style={{ gap: '12px' }}>
+              <div className="form-group mb-0">
+                <label className="form-label">Purchase No</label>
+                <input type="text" className="form-control" value={header.purchase_no} onChange={(e) => setHeader({...header, purchase_no: e.target.value})} readOnly={!canEdit} />
+              </div>
+              <div className="form-group mb-0">
+                <label className="form-label">Date *</label>
+                <input type="date" className="form-control" value={header.purchase_date} onChange={(e) => setHeader({...header, purchase_date: e.target.value})} required readOnly={!canEdit} />
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Purchase Date *</label>
-              <input 
-                type="date" 
-                className="form-control" 
-                value={header.purchase_date}
-                onChange={(e) => setHeader({...header, purchase_date: e.target.value})}
-                required
-                readOnly={!canEdit}
-              />
-            </div>
-          </div>
-          <div className="grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Supplier *</label>
-              <select 
-                className="form-control" 
-                value={header.supplier_id}
-                onChange={(e) => setHeader({...header, supplier_id: e.target.value})}
-                required
-                disabled={!canEdit}
-              >
-                <option value="">Select Supplier</option>
-                {customers.map(c => <option key={c.id} value={c.id}>[{c.customer_code}] {c.customer_name}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Due Date (지급기한)</label>
-              <input 
-                type="date" 
-                className="form-control" 
-                value={header.due_date || ''}
-                onChange={(e) => setHeader({...header, due_date: e.target.value})}
-                readOnly={!canEdit}
-              />
+            <div className="grid-cols-2" style={{ gap: '12px' }}>
+              <div className="form-group mb-0">
+                <label className="form-label">Supplier *</label>
+                <select className="form-control" value={header.supplier_id} onChange={(e) => setHeader({...header, supplier_id: e.target.value})} required disabled={!canEdit}>
+                  <option value="">Select Supplier</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>[{c.customer_code}] {c.customer_name}</option>)}
+                </select>
+              </div>
+              <div className="form-group mb-0">
+                <label className="form-label">Due Date</label>
+                <input type="date" className="form-control" value={header.due_date || ''} onChange={(e) => setHeader({...header, due_date: e.target.value})} readOnly={!canEdit} />
+              </div>
             </div>
           </div>
-          <div className="grid-cols-2">
-              <input 
-                type="text" 
-                className="form-control" 
-                value={header.remark}
-                onChange={(e) => setHeader({...header, remark: e.target.value})}
-                readOnly={!canEdit}
-              />
+          <div className="grid-cols-4 mt-8" style={{ gap: '12px', alignItems: 'end' }}>
+            <div className="col-span-3" style={{ gridColumn: 'span 3' }}>
+              <label className="form-label">Remark / Attachment URL</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input type="text" className="form-control" placeholder="Remark" value={header.remark} onChange={(e) => setHeader({...header, remark: e.target.value})} readOnly={!canEdit} style={{ flex: 2 }} />
+                <input type="text" className="form-control" placeholder="Attachment URL" value={header.attachment_url} onChange={(e) => setHeader({...header, attachment_url: e.target.value})} readOnly={!canEdit} style={{ flex: 1 }} />
+              </div>
             </div>
-          </div>
-          <div className="form-group" style={{ marginTop: '16px' }}>
-            <label className="form-label">Attachment (PDF url)</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="(Mockup) Enter URL for attachment..."
-              value={header.attachment_url}
-              onChange={(e) => setHeader({...header, attachment_url: e.target.value})}
-              readOnly={!canEdit}
-            />
           </div>
         </div>
 
         <div className="card">
-          <div className="flex-between mb-24">
-            <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Item Details</h3>
+          <div className="flex-between mb-12">
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold' }}>Item Details</h3>
             {canEdit && (
-              <button type="button" className="btn btn-ghost" onClick={handleAddItem} style={{ color: 'var(--primary)' }}>
+              <button type="button" className="btn btn-ghost" onClick={handleAddItem} style={{ color: 'var(--primary)', padding: '2px 8px', fontSize: '12px' }}>
                 + Add Item
               </button>
             )}
           </div>
           
-          <div className="data-table-container">
-            <table className="data-table">
+          <div className="data-table-container" style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ minWidth: '1350px', width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '60px' }}>No</th>
-                  <th style={{ minWidth: '150px' }}>Product Name *</th>
-                  <th style={{ width: '90px' }}>Qty *</th>
-                  <th style={{ width: '130px' }}>Net Price *</th>
-                  <th style={{ width: '80px' }}>VAT %</th>
-                  <th style={{ width: '100px' }}>VAT Amt</th>
-                  <th style={{ width: '130px' }}>Gross Amt</th>
-                  <th>Remark</th>
-                  <th style={{ width: '80px' }}>Action</th>
+                  <th style={{ width: '50px', minWidth: '50px' }}>No</th>
+                  <th style={{ minWidth: '350px' }}>Product Info *</th>
+                  <th style={{ width: '130px', minWidth: '130px' }}>Qty *</th>
+                  <th style={{ width: '170px', minWidth: '170px' }}>Net Price *</th>
+                  <th style={{ width: '100px', minWidth: '100px' }}>VAT %</th>
+                  <th style={{ width: '160px', minWidth: '160px' }}>VAT Amt</th>
+                  <th style={{ width: '180px', minWidth: '180px' }}>Gross Amt</th>
+                  <th style={{ minWidth: '150px' }}>Remark</th>
+                  <th style={{ width: '80px', minWidth: '80px' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,26 +365,29 @@ export default function PurchaseEntryPage() {
                   <tr key={index}>
                     <td>{item.line_no}</td>
                     <td>
-                      <select 
-                        className="form-control"
-                        value={item.product_code}
-                        onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
-                        required
+                      <ProductSelector 
+                        products={products}
+                        value={item.product_id}
+                        onChange={(val) => handleItemChange(index, 'product_code', val)}
                         disabled={!canEdit}
-                      >
-                        <option value="">Select Product</option>
-                        {products.map(p => <option key={p.product_code} value={p.product_code}>{p.product_name}</option>)}
-                      </select>
+                      />
+                      <ProductDisplay 
+                        product={products.find(p => p.id?.toString() === item.product_id?.toString())} 
+                      />
                     </td>
                     <td>
                       <input 
                         type="number" 
                         className="form-control" 
-                        value={item.qty}
-                        onChange={(e) => handleItemChange(index, 'qty', parseFloat(e.target.value))}
+                        value={item.qty === 0 ? '' : item.qty}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleItemChange(index, 'qty', val === '' ? '' : Number(val));
+                        }}
                         required
                         min="0.1"
                         step="0.1"
+                        style={{ textAlign: 'right' }}
                         readOnly={!canEdit}
                       />
                     </td>
@@ -423,10 +395,14 @@ export default function PurchaseEntryPage() {
                       <input 
                         type="number" 
                         className="form-control" 
-                        value={item.net_unit_price}
-                        onChange={(e) => handleItemChange(index, 'net_unit_price', parseFloat(e.target.value))}
+                        value={item.net_unit_price === 0 ? '' : item.net_unit_price}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleItemChange(index, 'net_unit_price', val === '' ? '' : Number(val));
+                        }}
                         required
                         min="0"
+                        style={{ textAlign: 'right' }}
                         readOnly={!canEdit}
                       />
                     </td>
@@ -473,15 +449,15 @@ export default function PurchaseEntryPage() {
           </div>
 
           <div className="flex-between mt-24" style={{ padding: '0 16px' }}>
-            <div style={{ fontSize: '18px', display: 'flex', gap: '24px' }}>
+            <div style={{ fontSize: '15px', display: 'flex', gap: '20px' }}>
               <div>Net Total: <span style={{ fontWeight: 'normal' }}>{totalNetAmount.toLocaleString()}</span></div>
               <div>VAT Total: <span style={{ fontWeight: 'normal' }}>{totalVatAmount.toLocaleString()}</span></div>
               <div style={{ fontWeight: 'bold' }}>
-                Gross Total: <span style={{ color: 'var(--primary)', marginLeft: '12px' }}>{totalAmount.toLocaleString()}</span>
+                Total: <span style={{ color: 'var(--primary)', marginLeft: '8px' }}>{totalAmount.toLocaleString()}</span>
               </div>
             </div>
             {canEdit && (
-              <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '12px 40px' }}>
+              <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '8px 24px' }}>
                 {loading ? 'Saving...' : 'Save All'}
               </button>
             )}
@@ -489,5 +465,13 @@ export default function PurchaseEntryPage() {
         </div>
       </form>
     </Shell>
+  );
+}
+
+export default function PurchaseEntryPage() {
+  return (
+    <Suspense fallback={<Shell><div>Loading...</div></Shell>}>
+      <PurchaseEntryContent />
+    </Suspense>
   );
 }

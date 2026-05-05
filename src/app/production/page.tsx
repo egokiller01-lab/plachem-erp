@@ -1,15 +1,18 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import Shell from '@/components/Shell';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useMemo } from 'react';
+import ProductSelector from '@/components/ProductSelector';
+import ProductDisplay from '@/components/ProductDisplay';
 
 interface ProductionItem {
   line_no: number;
+  product_id?: number | string;
   product_code: string;
   qty: number;
   remark: string;
@@ -17,7 +20,7 @@ interface ProductionItem {
   unit_cost?: number; // Phase 4-C 추가
 }
 
-export default function ProductionEntryPage() {
+function ProductionEntryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
@@ -56,9 +59,10 @@ export default function ProductionEntryPage() {
   });
 
   const canEdit = useMemo(() => {
+    if (!editId) return true; // 신규 생성 시 무조건 작성 허용 (생성자 검증 불가 회피)
     // Draft 상태에서만 수정 가능하며, (관리자/팀장) 또는 (본인 작성)이어야 함
     return header.status === 'draft' && (isAdmin || isManager || (header.created_by === userId));
-  }, [header.status, isAdmin, isManager, header.created_by, userId]);
+  }, [editId, header.status, isAdmin, isManager, header.created_by, userId]);
 
   const [inputs, setInputs] = useState<ProductionItem[]>([
     { line_no: 1, product_code: '', qty: 0, remark: '', current_stock: 0 }
@@ -69,44 +73,49 @@ export default function ProductionEntryPage() {
   ]);
 
   useEffect(() => {
-  const fetchMasters = async () => {
-    const { data: prodData } = await supabase.from('products').select('*').eq('status', 'active');
-    const { data: stockData } = await supabase.from('v_product_stock').select('*');
-    const { data: custData } = await supabase.from('customers').select('*').eq('status', 'active');
-    setProducts(prodData || []);
-    setStocks(stockData || []);
-    setCustomers(custData || []);
-  };
+    const init = async () => {
+      setInitialLoading(true);
+      const { data: prodData } = await supabase.from('products').select('*').eq('status', 'active');
+      const { data: stockData } = await supabase.from('v_product_stock').select('*');
+      const { data: custData } = await supabase.from('customers').select('*').eq('status', 'active');
+      setProducts(prodData || []);
+      setStocks(stockData || []);
+      setCustomers(custData || []);
 
-  const fetchProductionData = async () => {
-    if (!editId) {
+      if (editId) {
+        const { data: headData, error: headError } = await supabase.from('production_headers').select('*').eq('id', editId).single();
+        if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
+        setHeader(headData);
+
+        const { data: inData } = await supabase.from('production_inputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
+        setInputs(inData || []);
+
+        const { data: outData } = await supabase.from('production_outputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
+        setOutputs(outData || []);
+      } else {
+        setInputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', current_stock: 0, unit_cost: 0 }]);
+        setOutputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', unit_cost: 0 }]);
+      }
       setInitialLoading(false);
-      return;
-    }
-    setInitialLoading(true);
-    const { data: headData, error: headError } = await supabase.from('production_headers').select('*').eq('id', editId).single();
-    if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
-    setHeader(headData);
-
-    const { data: inputData } = await supabase.from('production_inputs').select('*').eq('production_header_id', editId).order('line_no');
-    if (inputData && inputData.length > 0) setInputs(inputData);
-
-    const { data: outputData } = await supabase.from('production_outputs').select('*').eq('production_header_id', editId).order('line_no');
-    if (outputData && outputData.length > 0) setOutputs(outputData);
-    
-    setInitialLoading(false);
-  };
-
-  useEffect(() => {
-    fetchMasters();
-    fetchProductionData();
+    };
+    init();
   }, [editId]);
 
-  const handleInputProductSelect = (index: number, productCode: string) => {
+  const handleInputProductSelect = (index: number, productId: string | number) => {
     if (!canEdit) return;
     const newInputs = [...inputs];
+    const prod = products.find(p => p.id?.toString() === productId?.toString());
+    const productCode = prod?.product_code || '';
     const stock = stocks.find(s => s.product_code === productCode)?.stock_qty || 0;
-    newInputs[index] = { ...newInputs[index], product_code: productCode, current_stock: stock };
+    
+    newInputs[index] = { 
+      ...newInputs[index], 
+      product_code: productCode,
+      product_id: prod?.id,
+      unit_cost: prod?.moving_avg_cost || 0,
+      current_stock: stock,
+      qty: newInputs[index].qty || 1
+    };
     setInputs(newInputs);
   };
 
@@ -120,11 +129,19 @@ export default function ProductionEntryPage() {
   const handleOutputChange = async (index: number, field: keyof ProductionItem, value: any) => {
     if (!canEdit) return;
     const newOutputs = [...outputs];
-    const oldProductCode = newOutputs[index].product_code;
-    newOutputs[index] = { ...newOutputs[index], [field]: value };
-    setOutputs(newOutputs);
-
-    newOutputs[index] = { ...newOutputs[index], [field]: value };
+    
+    if (field === 'product_code') {
+      const prod = products.find(p => p.id?.toString() === value?.toString());
+      if (!prod) return;
+      newOutputs[index] = { 
+        ...newOutputs[index], 
+        product_id: prod.id,
+        product_code: prod.product_code || '',
+        qty: newOutputs[index].qty || 1
+      };
+    } else {
+      newOutputs[index] = { ...newOutputs[index], [field]: value };
+    }
     setOutputs(newOutputs);
 
     // BOM 다중 대응 합산 로직 (완제품 전체 순회)
@@ -307,91 +324,60 @@ export default function ProductionEntryPage() {
         </div>
       )}
 
-      <div className="flex-between mb-24">
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>
+      <div className="flex-between mb-12">
+        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>
           {editId ? (canEdit ? 'Edit Production' : 'View Production') : 'Add Production Entry'}
         </h1>
-        <button className="btn btn-ghost" onClick={() => router.push('/production/list')}>Back to List</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-ghost" onClick={() => router.push('/production/list')} style={{ padding: '4px 12px', fontSize: '12px' }}>Back to List</button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="card mb-24">
-          <h3 style={{ marginBottom: '16px' }}>Basic Info</h3>
-          <div className="grid-cols-2">
-            <div className="form-group">
-              <label className="form-label">Production No</label>
-              <input type="text" className="form-control" value={header.production_no} onChange={(e) => setHeader({...header, production_no: e.target.value})} readOnly={!canEdit} />
+        <div className="card mb-12" style={{ padding: '12px 16px' }}>
+          <div className="grid-cols-2" style={{ gap: '12px' }}>
+            <div className="grid-cols-2" style={{ gap: '12px' }}>
+              <div className="form-group mb-0">
+                <label className="form-label">Production No</label>
+                <input type="text" className="form-control" value={header.production_no} onChange={(e) => setHeader({...header, production_no: e.target.value})} readOnly={!canEdit} />
+              </div>
+              <div className="form-group mb-0">
+                <label className="form-label">Date *</label>
+                <input type="date" className="form-control" value={header.production_date} onChange={(e) => setHeader({...header, production_date: e.target.value})} required readOnly={!canEdit} />
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Production Date *</label>
-              <input type="date" className="form-control" value={header.production_date} onChange={(e) => setHeader({...header, production_date: e.target.value})} required readOnly={!canEdit} />
+            <div className="form-group mb-0">
+              <label className="form-label">Remark</label>
+              <input type="text" className="form-control" value={header.remark} onChange={(e) => setHeader({...header, remark: e.target.value})} readOnly={!canEdit} />
             </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Remark</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value={header.remark}
-              onChange={(e) => setHeader({...header, remark: e.target.value})}
-              readOnly={!canEdit}
-            />
           </div>
 
-          <div className="grid-cols-4" style={{ marginTop: '16px', gap: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">생산 유형</label>
-              <select 
-                className="form-control"
-                value={header.production_type}
-                onChange={(e) => setHeader({...header, production_type: e.target.value as any})}
-                disabled={!canEdit}
-              >
+          <div className="grid-cols-4 mt-8" style={{ gap: '12px', alignItems: 'end' }}>
+            <div className="form-group mb-0">
+              <label className="form-label">Type</label>
+              <select className="form-control" value={header.production_type} onChange={(e) => setHeader({...header, production_type: e.target.value as any})} disabled={!canEdit}>
                 <option value="INTERNAL">INTERNAL (사내)</option>
                 <option value="SUBCON">SUBCON (외주)</option>
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">외주처 (Vendor)</label>
-              <select 
-                className="form-control"
-                value={header.vendor_id}
-                onChange={(e) => setHeader({...header, vendor_id: e.target.value})}
-                disabled={!canEdit || header.production_type !== 'SUBCON'}
-              >
+            <div className="form-group mb-0">
+              <label className="form-label">Vendor (Subcon)</label>
+              <select className="form-control" value={header.vendor_id} onChange={(e) => setHeader({...header, vendor_id: e.target.value})} disabled={!canEdit || header.production_type !== 'SUBCON'}>
                 <option value="">Select Vendor</option>
                 {customers.map(c => <option key={c.id} value={c.id}>[{c.customer_code}] {c.customer_name}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">외주 가공비</label>
-              <input 
-                type="number" 
-                className="form-control"
-                value={header.processing_fee}
-                onChange={(e) => setHeader({...header, processing_fee: parseFloat(e.target.value) || 0})}
-                readOnly={!canEdit || header.production_type !== 'SUBCON'}
-              />
+            <div className="form-group mb-0">
+              <label className="form-label">Processing Fee</label>
+              <input type="number" className="form-control" value={header.processing_fee} onChange={(e) => setHeader({...header, processing_fee: parseFloat(e.target.value) || 0})} style={{ textAlign: 'right' }} readOnly={!canEdit || header.production_type !== 'SUBCON'} />
             </div>
-            <div className="form-group">
-              <label className="form-label">추가 부대비용</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input 
-                  type="number" 
-                  className="form-control"
-                  style={{ flex: 1 }}
-                  value={header.additional_cost}
-                  onChange={(e) => setHeader({...header, additional_cost: parseFloat(e.target.value) || 0})}
-                  readOnly={!canEdit}
-                />
-                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={header.is_additional_cost_payable} 
-                    onChange={(e) => setHeader({...header, is_additional_cost_payable: e.target.checked})}
-                    disabled={!canEdit}
-                  />
-                  AP포함
+            <div className="form-group mb-0">
+              <label className="form-label">Addl Cost</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input type="number" className="form-control" style={{ flex: 1, textAlign: 'right' }} value={header.additional_cost} onChange={(e) => setHeader({...header, additional_cost: parseFloat(e.target.value) || 0})} readOnly={!canEdit} />
+                <label style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <input type="checkbox" checked={header.is_additional_cost_payable} onChange={(e) => setHeader({...header, is_additional_cost_payable: e.target.checked})} disabled={!canEdit} />
+                  AP
                 </label>
               </div>
             </div>
@@ -404,27 +390,42 @@ export default function ProductionEntryPage() {
               <h3 style={{ fontSize: '18px', color: 'var(--danger)' }}>1. Materials (Inputs)</h3>
               {canEdit && <button type="button" className="btn btn-ghost" onClick={() => setInputs([...inputs, { line_no: inputs.length + 1, product_code: '', qty: 0, remark: '', current_stock: 0, unit_cost: 0 }])}>+ Add</button>}
             </div>
-            <div className="data-table-container">
-              <table className="data-table">
+            <div className="data-table-container" style={{ overflowX: 'auto' }}>
+              <table className="data-table" style={{ minWidth: '700px', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th>Material Name</th>
-                    <th style={{ width: '80px' }}>Stock</th>
-                    <th style={{ width: '100px' }}>Qty</th>
+                    <th style={{ minWidth: '350px' }}>Material Info</th>
+                    <th style={{ width: '120px', minWidth: '120px' }}>Stock</th>
+                    <th style={{ width: '140px', minWidth: '140px' }}>Qty</th>
                   </tr>
                 </thead>
                 <tbody>
                   {inputs.map((item, index) => (
                     <tr key={index}>
                       <td>
-                        <select className="form-control" value={item.product_code} onChange={(e) => handleInputProductSelect(index, e.target.value)} disabled={!canEdit}>
-                          <option value="">Select</option>
-                          {products.filter(p => ['raw_material', 'sub_material'].includes(p.product_type)).map(p => <option key={p.product_code} value={p.product_code}>{p.product_name}</option>)}
-                        </select>
+                        <ProductSelector 
+                          products={products.filter(p => ['raw_material', 'sub_material'].includes(p.product_type))}
+                          value={item.product_id || ''}
+                          onChange={(val) => handleInputProductSelect(index, val)}
+                          disabled={!canEdit}
+                        />
+                        <ProductDisplay 
+                          product={products.find(p => p.id?.toString() === item.product_id?.toString())} 
+                        />
                       </td>
                       <td style={{ fontSize: '12px' }}>{item.current_stock}</td>
                       <td>
-                        <input type="number" className="form-control" value={item.qty} onChange={(e) => handleInputChange(index, 'qty', parseFloat(e.target.value))} readOnly={!canEdit} />
+                        <input 
+                          type="number" 
+                          className="form-control" 
+                          value={item.qty === 0 ? '' : item.qty} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            handleInputChange(index, 'qty', val === '' ? '' : Number(val));
+                          }} 
+                          style={{ textAlign: 'right' }}
+                          readOnly={!canEdit} 
+                        />
                       </td>
                     </tr>
                   ))}
@@ -438,26 +439,41 @@ export default function ProductionEntryPage() {
               <h3 style={{ fontSize: '18px', color: 'var(--success)' }}>2. Products (Outputs)</h3>
               {canEdit && <button type="button" className="btn btn-ghost" onClick={() => setOutputs([...outputs, { line_no: outputs.length + 1, product_code: '', qty: 0, remark: '', unit_cost: 0 }])}>+ Add</button>}
             </div>
-            <div className="data-table-container">
-              <table className="data-table">
+            <div className="data-table-container" style={{ overflowX: 'auto' }}>
+              <table className="data-table" style={{ minWidth: '700px', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th>Product Name</th>
-                    <th style={{ width: '100px' }}>Qty</th>
-                    {header.status === 'confirmed' && <th style={{ width: '130px' }}>생산단가(Cost)</th>}
+                    <th style={{ minWidth: '350px' }}>Product Info</th>
+                    <th style={{ width: '140px', minWidth: '140px' }}>Qty</th>
+                    {header.status === 'confirmed' && <th style={{ width: '150px', minWidth: '150px' }}>생산단가(Cost)</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {outputs.map((item, index) => (
                     <tr key={index}>
                       <td>
-                        <select className="form-control" value={item.product_code} onChange={(e) => handleOutputChange(index, 'product_code', e.target.value)} disabled={!canEdit}>
-                          <option value="">Select</option>
-                          {products.filter(p => ['finished_goods'].includes(p.product_type)).map(p => <option key={p.product_code} value={p.product_code}>{p.product_name}</option>)}
-                        </select>
+                        <ProductSelector 
+                          products={products.filter(p => ['finished_goods'].includes(p.product_type))}
+                          value={item.product_id || ''}
+                          onChange={(val) => handleOutputChange(index, 'product_code', val)}
+                          disabled={!canEdit}
+                        />
+                        <ProductDisplay 
+                          product={products.find(p => p.id?.toString() === item.product_id?.toString())} 
+                        />
                       </td>
                       <td>
-                        <input type="number" className="form-control" value={item.qty} onChange={(e) => handleOutputChange(index, 'qty', parseFloat(e.target.value))} readOnly={!canEdit} />
+                        <input 
+                          type="number" 
+                          className="form-control" 
+                          value={item.qty === 0 ? '' : item.qty} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            handleOutputChange(index, 'qty', val === '' ? '' : Number(val));
+                          }} 
+                          style={{ textAlign: 'right' }}
+                          readOnly={!canEdit} 
+                        />
                       </td>
                       {header.status === 'confirmed' && (
                         <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--primary)' }}>
@@ -496,5 +512,13 @@ export default function ProductionEntryPage() {
         </div>
       </form>
     </Shell>
+  );
+}
+
+export default function ProductionEntryPage() {
+  return (
+    <Suspense fallback={<Shell><div>Loading...</div></Shell>}>
+      <ProductionEntryContent />
+    </Suspense>
   );
 }
