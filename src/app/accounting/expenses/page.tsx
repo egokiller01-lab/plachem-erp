@@ -133,11 +133,11 @@ export default function ExpensesPage() {
             <div className="grid-cols-2" style={{ gap: '8px' }}>
               <div>
                 <label className="form-label">공급가액</label>
-                <input type="number" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })} />
+                <input type="number" className="form-control" value={formData.amount === 0 ? '' : formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value ? Number(e.target.value) : 0 })} />
               </div>
               <div>
                 <label className="form-label">부가세</label>
-                <input type="number" className="form-control" value={formData.vat_amount} onChange={e => setFormData({ ...formData, vat_amount: Number(e.target.value) })} />
+                <input type="number" className="form-control" value={formData.vat_amount === 0 ? '' : formData.vat_amount} onChange={e => setFormData({ ...formData, vat_amount: e.target.value ? Number(e.target.value) : 0 })} />
               </div>
             </div>
 
