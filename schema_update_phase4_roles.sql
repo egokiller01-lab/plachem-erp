@@ -15,18 +15,45 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Profiles 테이블에 대한 RLS 켜기
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- 누구나 자신의 프로필 정보를 조회할 수 있고, manager나 admin은 모든 유저 목록을 조회할 수 있도록 허용
-CREATE POLICY "Users can view own profile or managers can view all" 
-ON public.profiles FOR SELECT 
-USING (
-  auth.uid() = id OR 
-  (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('manager', 'admin')
-);
+-- 0. 관리자 권한 확인 함수 생성
+CREATE OR REPLACE FUNCTION public.auth_is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+    -- SECURITY DEFINER는 실행 시 RLS를 우회하여 재귀 루프를 방지합니다.
+    RETURN EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role = 'admin'
+    );
+END;
+$function$;
 
--- Admin 권한을 가진 사람만 Profiles 테이블의 레코드를 수정(권한 부여 등)할 수 있음
-CREATE POLICY "Admin can update profiles" 
-ON public.profiles FOR UPDATE 
-USING ( (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin' );
+-- 1. 구 정책 삭제
+DROP POLICY IF EXISTS "Users can view own profile or managers can view all" ON public.profiles;
+DROP POLICY IF EXISTS "Authenticated users can view profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin can update profiles" ON public.profiles;
+
+-- 2. 정규 정책 삭제 (멱등성)
+DROP POLICY IF EXISTS "rls_erp_profiles_select_self" ON public.profiles;
+DROP POLICY IF EXISTS "rls_erp_profiles_select_admin" ON public.profiles;
+DROP POLICY IF EXISTS "rls_erp_profiles_update_admin" ON public.profiles;
+
+-- 3. 최종 정책 생성
+CREATE POLICY "rls_erp_profiles_select_self"
+  ON public.profiles FOR SELECT
+  USING (id = auth.uid());
+
+CREATE POLICY "rls_erp_profiles_select_admin"
+  ON public.profiles FOR SELECT
+  USING (public.auth_is_admin());
+
+CREATE POLICY "rls_erp_profiles_update_admin"
+  ON public.profiles FOR UPDATE
+  USING (public.auth_is_admin())
+  WITH CHECK (public.auth_is_admin());
 
 -- 2. 새 유저 가입 시 자동 동기화 트리거 함수
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
