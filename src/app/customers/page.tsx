@@ -267,6 +267,7 @@ export default function CustomersPage() {
             </div>
             <div className="flex-between" style={{ marginTop: '32px' }}>
               <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={formLoading}>
                 {formLoading ? 'Saving...' : 'Save'}
               </button>
             </div>

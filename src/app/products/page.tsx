@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Shell from '@/components/Shell';
+import ProductDisplay from '@/components/ProductDisplay';
 
 interface Product {
   id: string;
@@ -270,9 +271,7 @@ export default function ProductsPage() {
             <thead>
               <tr>
                 <th>Code</th>
-                <th>Product Name</th>
-                <th>Type</th>
-                <th>Spec/Package</th>
+                <th>Product Info (Name / Type / Spec)</th>
                 <th>Current Stock</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -280,13 +279,11 @@ export default function ProductsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : filteredProducts.map((product) => (
                 <tr key={product.id}>
                   <td>{product.product_code}</td>
-                  <td>{product.product_name}</td>
-                  <td>{productTypeLabels[product.product_type]}</td>
-                  <td>{product.spec} / {product.package}</td>
+                  <td><ProductDisplay product={product} /></td>
                   <td style={{ fontWeight: 'bold' }}>{product.stock_qty} {product.unit}</td>
                   <td>
                     <span className={`badge ${product.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
@@ -299,7 +296,7 @@ export default function ProductsPage() {
                 </tr>
               ))}
               {filteredProducts.length === 0 && !loading && (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>No results found.</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center' }}>No results found.</td></tr>
               )}
             </tbody>
           </table>
