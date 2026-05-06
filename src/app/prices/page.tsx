@@ -65,21 +65,23 @@ export default function PriceManagementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data: userData } = await supabase.auth.getUser();
     const payload = { 
       customer_id: Number(formData.customer_id),
       product_id: Number(formData.product_id),
       price: formData.price,
       valid_from: formData.valid_from,
       valid_to: formData.valid_to,
-      remark: formData.remark,
-      created_by: userData.user?.id 
+      remark: formData.remark
     };
 
-    if (editingId) {
-      await supabase.from('customer_product_prices').update(payload).eq('id', editingId);
-    } else {
-      await supabase.from('customer_product_prices').insert([payload]);
+    const { error } = editingId
+      ? await supabase.from('customer_product_prices').update(payload).eq('id', editingId)
+      : await supabase.from('customer_product_prices').insert([payload]);
+
+    if (error) {
+      console.error('Save failed:', error);
+      alert('저장 실패: ' + error.message);
+      return;
     }
 
     setShowForm(false);
