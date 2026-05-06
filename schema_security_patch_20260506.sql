@@ -25,3 +25,13 @@ DROP POLICY IF EXISTS "PH_Select" ON public.purchase_headers;
 DROP POLICY IF EXISTS "SH_Edit_Draft" ON public.sales_headers;
 DROP POLICY IF EXISTS "SH_Insert" ON public.sales_headers;
 DROP POLICY IF EXISTS "SH_Select" ON public.sales_headers;
+
+-- 6. RPC 권한 함수 보안 패치 (SQL Injection 방어 및 누락 복구)
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+    SELECT role FROM public.profiles WHERE id = auth.uid();
+$$;

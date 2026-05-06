@@ -7,6 +7,12 @@
 - `authenticated` 그룹의 위험 구조 권한(TRUNCATE, TRIGGER, REFERENCES) 회수
 - `customers` 및 `customer_product_prices` 테이블 RLS(Row Level Security) 활성화
 - `sales_headers`, `purchase_headers`의 구버전 약한 보안 정책(Policies) 제거
+- 화면 테스트 중 `public.get_my_role()` 누락 오류 발견
+- Supabase SQL Editor에서 `get_my_role()` 복구 실행
+- `search_path` 포함 `SECURITY DEFINER` 함수로 보안 강화
+- 오류 해소 확인
+- repo 재현성을 위해 `schema_security_patch_20260506.sql`에 반영
+
 
 ## 남은 과제
 - `policy_count=0`인 테이블(예: `customer_product_prices`) 정책(Policy) 설계 및 적용
