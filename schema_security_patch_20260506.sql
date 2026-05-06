@@ -65,3 +65,16 @@ CREATE POLICY "document_history_logs_select_authenticated" ON public.document_hi
 
 DROP POLICY IF EXISTS "customer_product_prices_select_authenticated" ON public.customer_product_prices;
 CREATE POLICY "customer_product_prices_select_authenticated" ON public.customer_product_prices FOR SELECT TO authenticated USING (true);
+
+-- 8. 1차 쓰기 권한(INSERT/UPDATE/DELETE) RLS 적용 (수동 적용 내역 repo 재현성)
+DROP POLICY IF EXISTS "cpp_insert_mgr" ON public.customer_product_prices;
+CREATE POLICY "cpp_insert_mgr" ON public.customer_product_prices FOR INSERT TO authenticated WITH CHECK (public.get_my_role() IN ('manager', 'admin'));
+
+DROP POLICY IF EXISTS "cpp_update_mgr" ON public.customer_product_prices;
+CREATE POLICY "cpp_update_mgr" ON public.customer_product_prices FOR UPDATE TO authenticated USING (public.get_my_role() IN ('manager', 'admin')) WITH CHECK (public.get_my_role() IN ('manager', 'admin'));
+
+DROP POLICY IF EXISTS "cpp_delete_mgr" ON public.customer_product_prices;
+CREATE POLICY "cpp_delete_mgr" ON public.customer_product_prices FOR DELETE TO authenticated USING (public.get_my_role() IN ('manager', 'admin'));
+
+DROP POLICY IF EXISTS "cer_insert_auth" ON public.credit_exception_requests;
+CREATE POLICY "cer_insert_auth" ON public.credit_exception_requests FOR INSERT TO authenticated WITH CHECK (requested_by = auth.uid());

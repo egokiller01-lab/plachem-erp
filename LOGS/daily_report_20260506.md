@@ -13,38 +13,15 @@
 - 오류 해소 확인
 - repo 재현성을 위해 `schema_security_patch_20260506.sql`에 반영
 - `policy_count=0` 테이블 조회 화면 복구용 SELECT 정책 9개 적용 (`schema_security_patch_20260506.sql`에 기록)
-- `/prices`, `/accounting/ap`, `/accounting/ar` 등 조회 테스트 정상화 목적 (쓰기 정책은 아직 보류)
+- `/prices`, `/accounting/ap`, `/accounting/ar` 등 조회 테스트 정상화 목적. 이후 단가 관리 및 여신 예외 요청의 1차 쓰기 정책 일부 적용.
 
 ## 남은 과제
 - 조회용 SELECT 정책은 1차 적용 완료. 남은 과제는 INSERT/UPDATE/DELETE 쓰기 정책 설계 및 실제 업무 시나리오 테스트.
 - RLS 정책 변경에 따른 프론트엔드 화면 동작 및 업무 시나리오 테스트
 
-### [후보] customer_product_prices 신규 RLS 정책안
-*(※ 아래 정책들은 아직 실행 또는 SQL 파일에 반영되지 않은 초안입니다.)*
-
-- **SELECT (적용 완료: `customer_product_prices_select_authenticated`)**
-
-- **INSERT (관리자 전용)**
-```sql
-CREATE POLICY "cpp_insert_admin"
-ON public.customer_product_prices
-FOR INSERT TO authenticated
-WITH CHECK (public.auth_is_admin());
-```
-
-- **UPDATE (관리자 전용)**
-```sql
-CREATE POLICY "cpp_update_admin"
-ON public.customer_product_prices
-FOR UPDATE TO authenticated
-USING (public.auth_is_admin())
-WITH CHECK (public.auth_is_admin());
-```
-
-- **DELETE (관리자 전용)**
-```sql
-CREATE POLICY "cpp_delete_admin"
-ON public.customer_product_prices
-FOR DELETE TO authenticated
-USING (public.auth_is_admin());
-```
+### 1차 쓰기 RLS 정책 적용 및 테스트 결과
+- **`customer_product_prices` (단가 관리)**
+  - INSERT/UPDATE 정책(`cpp_insert_mgr`, `cpp_update_mgr`) DB 적용 및 화면 연동 테스트 성공
+  - DELETE 정책(`cpp_delete_mgr`) DB 적용 완료 (화면에 삭제 UI가 없어 테스트 보류)
+- **`credit_exception_requests` (여신 예외 요청)**
+  - INSERT 정책(`cer_insert_auth`) DB 적용 완료, 화면 테스트는 추후 진행
