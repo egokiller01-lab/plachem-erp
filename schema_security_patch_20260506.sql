@@ -35,3 +35,33 @@ SET search_path TO 'public'
 AS $$
     SELECT role FROM public.profiles WHERE id = auth.uid();
 $$;
+
+-- 7. 화면 조회 안정화를 위한 읽기 전용(SELECT) RLS 1차 적용 (9개 테이블)
+-- (관리자/개발자가 수동 적용한 정책을 repo 재현성에 맞게 추가)
+
+DROP POLICY IF EXISTS "ap_select_authenticated" ON public.accounts_payable;
+CREATE POLICY "ap_select_authenticated" ON public.accounts_payable FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "ar_select_authenticated" ON public.accounts_receivable;
+CREATE POLICY "ar_select_authenticated" ON public.accounts_receivable FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "payment_records_select_authenticated" ON public.payment_records;
+CREATE POLICY "payment_records_select_authenticated" ON public.payment_records FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "receipt_records_select_authenticated" ON public.receipt_records;
+CREATE POLICY "receipt_records_select_authenticated" ON public.receipt_records FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "expense_categories_select_authenticated" ON public.expense_categories;
+CREATE POLICY "expense_categories_select_authenticated" ON public.expense_categories FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "expense_records_select_authenticated" ON public.expense_records;
+CREATE POLICY "expense_records_select_authenticated" ON public.expense_records FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "credit_exception_requests_select_authenticated" ON public.credit_exception_requests;
+CREATE POLICY "credit_exception_requests_select_authenticated" ON public.credit_exception_requests FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "document_history_logs_select_authenticated" ON public.document_history_logs;
+CREATE POLICY "document_history_logs_select_authenticated" ON public.document_history_logs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "customer_product_prices_select_authenticated" ON public.customer_product_prices;
+CREATE POLICY "customer_product_prices_select_authenticated" ON public.customer_product_prices FOR SELECT TO authenticated USING (true);

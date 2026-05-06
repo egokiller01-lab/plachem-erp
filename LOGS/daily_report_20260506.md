@@ -12,22 +12,17 @@
 - `search_path` 포함 `SECURITY DEFINER` 함수로 보안 강화
 - 오류 해소 확인
 - repo 재현성을 위해 `schema_security_patch_20260506.sql`에 반영
-
+- `policy_count=0` 테이블 조회 화면 복구용 SELECT 정책 9개 적용 (`schema_security_patch_20260506.sql`에 기록)
+- `/prices`, `/accounting/ap`, `/accounting/ar` 등 조회 테스트 정상화 목적 (쓰기 정책은 아직 보류)
 
 ## 남은 과제
-- `policy_count=0`인 테이블(예: `customer_product_prices`) 정책(Policy) 설계 및 적용
+- 조회용 SELECT 정책은 1차 적용 완료. 남은 과제는 INSERT/UPDATE/DELETE 쓰기 정책 설계 및 실제 업무 시나리오 테스트.
 - RLS 정책 변경에 따른 프론트엔드 화면 동작 및 업무 시나리오 테스트
 
 ### [후보] customer_product_prices 신규 RLS 정책안
 *(※ 아래 정책들은 아직 실행 또는 SQL 파일에 반영되지 않은 초안입니다.)*
 
-- **SELECT (모든 로그인 사용자 조회 허용)**
-```sql
-CREATE POLICY "cpp_select_authenticated"
-ON public.customer_product_prices
-FOR SELECT TO authenticated
-USING (true);
-```
+- **SELECT (적용 완료: `customer_product_prices_select_authenticated`)**
 
 - **INSERT (관리자 전용)**
 ```sql
