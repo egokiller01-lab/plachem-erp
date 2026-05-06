@@ -7,14 +7,14 @@ import Shell from '@/components/Shell';
 
 interface PriceRecord {
   id: string;
-  customer_code: string;
-  product_code: string;
+  customer_id: number;
+  product_id: number;
   price: number;
   valid_from: string;
   valid_to: string;
   remark: string;
-  customers?: { customer_name: string };
-  products?: { product_name: string; unit: string };
+  customers?: { customer_name: string; customer_code: string };
+  products?: { product_name: string; unit: string; product_code: string };
 }
 
 export default function PriceManagementPage() {
@@ -26,8 +26,8 @@ export default function PriceManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    customer_code: '',
-    product_code: '',
+    customer_id: '',
+    product_id: '',
     price: 0,
     valid_from: new Date().toISOString().split('T')[0],
     valid_to: '9999-12-31',
@@ -37,19 +37,25 @@ export default function PriceManagementPage() {
   const fetchData = async () => {
     setLoading(true);
     // Fetch master data for dropdowns
-    const { data: custData } = await supabase.from('customers').select('customer_code, customer_name').eq('status', 'active');
-    const { data: prodData } = await supabase.from('products').select('product_code, product_name, unit').eq('status', 'active');
+    const { data: custData } = await supabase.from('customers').select('id, customer_code, customer_name').eq('status', 'active');
+    const { data: prodData } = await supabase.from('products').select('id, product_code, product_name, unit').eq('status', 'active');
     setCustomers(custData || []);
     setProducts(prodData || []);
 
     // Fetch price records with joins
-    const { data: priceData } = await supabase
+    const { data: priceData, error } = await supabase
       .from('customer_product_prices')
-      .select('*, customers(customer_name), products(product_name, unit)')
-      .order('customer_code')
+      .select('*, customers(customer_name, customer_code), products(product_name, unit, product_code)')
+      .order('customer_id')
       .order('valid_from', { ascending: false });
 
-    setPrices(priceData || []);
+    if (error) {
+      console.error('Failed to fetch prices:', error);
+      alert('데이터를 불러오는데 실패했습니다: ' + error.message);
+      setPrices([]);
+    } else {
+      setPrices(priceData || []);
+    }
     setLoading(false);
   };
 
@@ -60,7 +66,15 @@ export default function PriceManagementPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
-    const payload = { ...formData, created_by: userData.user?.id };
+    const payload = { 
+      customer_id: Number(formData.customer_id),
+      product_id: Number(formData.product_id),
+      price: formData.price,
+      valid_from: formData.valid_from,
+      valid_to: formData.valid_to,
+      remark: formData.remark,
+      created_by: userData.user?.id 
+    };
 
     if (editingId) {
       await supabase.from('customer_product_prices').update(payload).eq('id', editingId);
@@ -76,8 +90,8 @@ export default function PriceManagementPage() {
   const handleEdit = (rec: PriceRecord) => {
     setEditingId(rec.id);
     setFormData({
-      customer_code: rec.customer_code,
-      product_code: rec.product_code,
+      customer_id: String(rec.customer_id),
+      product_id: String(rec.product_id),
       price: rec.price,
       valid_from: rec.valid_from,
       valid_to: rec.valid_to,
@@ -104,24 +118,24 @@ export default function PriceManagementPage() {
                 <label className="form-label">Select Customer *</label>
                 <select 
                   className="form-control" 
-                  value={formData.customer_code} 
-                  onChange={(e) => setFormData({...formData, customer_code: e.target.value})} 
+                  value={formData.customer_id} 
+                  onChange={(e) => setFormData({...formData, customer_id: e.target.value})} 
                   required
                 >
                   <option value="">Select Customer</option>
-                  {customers.map(c => <option key={c.customer_code} value={c.customer_code}>{c.customer_name} ({c.customer_code})</option>)}
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.customer_name} ({c.customer_code})</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Select Product *</label>
                 <select 
                   className="form-control" 
-                  value={formData.product_code} 
-                  onChange={(e) => setFormData({...formData, product_code: e.target.value})} 
+                  value={formData.product_id} 
+                  onChange={(e) => setFormData({...formData, product_id: e.target.value})} 
                   required
                 >
                   <option value="">Select Product</option>
-                  {products.map(p => <option key={p.product_code} value={p.product_code}>{p.product_name} ({p.product_code})</option>)}
+                  {products.map(p => <option key={p.id} value={p.id}>{p.product_name} ({p.product_code})</option>)}
                 </select>
               </div>
             </div>
@@ -201,8 +215,8 @@ export default function PriceManagementPage() {
                 <tr><td colSpan={6} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : prices.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.customers?.customer_name} ({p.customer_code})</td>
-                  <td>{p.products?.product_name} ({p.product_code})</td>
+                  <td>{p.customers?.customer_name} ({p.customers?.customer_code})</td>
+                  <td>{p.products?.product_name} ({p.products?.product_code})</td>
                   <td style={{ fontWeight: 'bold' }}>{p.price.toLocaleString()}</td>
                   <td style={{ fontSize: '13px' }}>{p.valid_from} ~ {p.valid_to}</td>
                   <td>{p.remark}</td>
