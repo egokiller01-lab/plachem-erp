@@ -78,3 +78,12 @@ CREATE POLICY "cpp_delete_mgr" ON public.customer_product_prices FOR DELETE TO a
 
 DROP POLICY IF EXISTS "cer_insert_auth" ON public.credit_exception_requests;
 CREATE POLICY "cer_insert_auth" ON public.credit_exception_requests FOR INSERT TO authenticated WITH CHECK (requested_by = auth.uid());
+
+-- 9. expense_records 쓰기 권한 및 컬럼 패치 (수동 적용 내역 repo 재현성)
+ALTER TABLE public.expense_records ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES auth.users(id);
+
+DROP POLICY IF EXISTS "er_insert_auth" ON public.expense_records;
+CREATE POLICY "er_insert_auth" ON public.expense_records FOR INSERT TO authenticated WITH CHECK (created_by = auth.uid());
+
+DROP POLICY IF EXISTS "er_update_draft" ON public.expense_records;
+CREATE POLICY "er_update_draft" ON public.expense_records FOR UPDATE TO authenticated USING (created_by = auth.uid() AND status = 'draft') WITH CHECK (created_by = auth.uid() AND status = 'draft');

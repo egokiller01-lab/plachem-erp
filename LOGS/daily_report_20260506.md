@@ -13,7 +13,7 @@
 - 오류 해소 확인
 - repo 재현성을 위해 `schema_security_patch_20260506.sql`에 반영
 - `policy_count=0` 테이블 조회 화면 복구용 SELECT 정책 9개 적용 (`schema_security_patch_20260506.sql`에 기록)
-- `/prices`, `/accounting/ap`, `/accounting/ar` 등 조회 테스트 정상화 목적. 이후 단가 관리 및 여신 예외 요청의 1차 쓰기 정책 일부 적용.
+- `/prices`, `/accounting/ap`, `/accounting/ar` 등 조회 테스트 정상화 목적. 이후 단가 관리, 여신 예외 요청, 일반 판관비의 1차 쓰기 정책 일부 적용.
 
 ## 남은 과제
 - 조회용 SELECT 정책은 1차 적용 완료. 남은 과제는 INSERT/UPDATE/DELETE 쓰기 정책 설계 및 실제 업무 시나리오 테스트.
@@ -25,3 +25,6 @@
   - DELETE 정책(`cpp_delete_mgr`) DB 적용 완료 (화면에 삭제 UI가 없어 테스트 보류)
 - **`credit_exception_requests` (여신 예외 요청)**
   - INSERT 정책(`cer_insert_auth`) DB 적용 완료, 화면 테스트는 추후 진행
+- **`expense_records` (일반 판관비 관리)**
+  - `created_by` 컬럼 추가 및 작성자 기반 RLS 정책(`er_insert_auth`, `er_update_draft`) 적용 완료
+  - 화면에서 신규 비용 등록 및 수정 테스트 성공 확인

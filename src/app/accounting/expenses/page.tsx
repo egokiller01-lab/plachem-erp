@@ -64,12 +64,15 @@ export default function ExpensesPage() {
       error = err;
     }
 
-    if (error) alert('저장 실패: ' + error.message);
-    else {
-      alert('성공적으로 저장되었습니다.');
-      setFormData({ ...formData, id: null, remark: '', amount: 0, vat_amount: 0 });
-      fetchBaseData();
+    if (error) {
+      console.error('Save failed:', error);
+      alert('저장 실패: ' + error.message);
+      return;
     }
+
+    alert('성공적으로 저장되었습니다.');
+    setFormData({ ...formData, id: null, remark: '', amount: 0, vat_amount: 0 });
+    fetchBaseData();
   };
 
   const handleAction = async (id: number, action: 'confirm' | 'unconfirm') => {
