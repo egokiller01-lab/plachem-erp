@@ -16,7 +16,7 @@ interface ProductSelectorProps {
   disabled?: boolean;
 }
 
-export default function ProductSelector({ products, value, onChange, disabled }: ProductSelectorProps) {
+const ProductSelector = React.memo(({ products, value, onChange, disabled }: ProductSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -33,10 +33,13 @@ export default function ProductSelector({ products, value, onChange, disabled }:
 
   const selectedProduct = products.find(p => p.id?.toString() === value?.toString()) || null;
 
-  const filtered = products.filter(p => 
-    p.product_name.toLowerCase().includes(search.toLowerCase()) || 
-    p.product_code.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const name = (p.product_name || (p as any).name || p.product_code || (p as any).code || '').toLowerCase();
+    const code = (p.product_code || (p as any).code || '').toLowerCase();
+    return name.includes(q) || code.includes(q);
+  });
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
@@ -51,12 +54,15 @@ export default function ProductSelector({ products, value, onChange, disabled }:
           alignItems: 'center',
           justifyContent: 'space-between',
           backgroundColor: disabled ? '#f3f4f6' : '#fff',
-          fontSize: '13px'
+          fontSize: '13px',
+          border: '1px solid var(--border-color)'
         }}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: selectedProduct ? 'var(--text-main)' : '#9ca3af' }}>
-          {selectedProduct ? `[${selectedProduct.product_code}] ${selectedProduct.product_name}` : 'Select Product...'}
+          {selectedProduct 
+            ? `[${selectedProduct.product_code || (selectedProduct as any).code || ''}] ${selectedProduct.product_name || (selectedProduct as any).name || ''}` 
+            : 'Select Product...'}
         </div>
         <div style={{ fontSize: '10px', color: '#9ca3af', marginLeft: '4px' }}>▼</div>
       </div>
@@ -76,7 +82,7 @@ export default function ProductSelector({ products, value, onChange, disabled }:
           maxHeight: '250px',
           display: 'flex',
           flexDirection: 'column',
-          width: '400px' // 테이블 셀보다 넓게 표시하여 가독성 확보
+          width: '400px'
         }}>
           <div style={{ padding: '6px', borderBottom: '1px solid var(--border-color)' }}>
             <input 
@@ -94,31 +100,39 @@ export default function ProductSelector({ products, value, onChange, disabled }:
             {filtered.length === 0 ? (
               <div style={{ padding: '10px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>No results</div>
             ) : (
-              filtered.map((p) => (
-                <div 
-                  key={p.id}
-                  style={{ 
-                    padding: '8px 10px', 
-                    borderBottom: '1px solid #f3f4f6',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => {
-                    onChange(p.id!);
-                    setIsOpen(false);
-                    setSearch('');
-                  }}
-                >
-                  <div style={{ fontWeight: '600' }}>[{p.product_code}] {p.product_name}</div>
-                  <div style={{ fontSize: '11px', color: '#666' }}>{p.product_type} | {p.spec} | {p.package}</div>
-                </div>
-              ))
+              filtered.map((p) => {
+                const pCode = p.product_code || (p as any).code || '';
+                const pName = p.product_name || (p as any).name || '(Unnamed)';
+                return (
+                  <div 
+                    key={p.id}
+                    style={{ 
+                      padding: '8px 10px', 
+                      borderBottom: '1px solid #f3f4f6',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onClick={() => {
+                      onChange(p.id!);
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                  >
+                    <div style={{ fontWeight: '600' }}>[{pCode}] {pName}</div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>
+                      {p.product_type || ''} | {p.spec || ''} | {p.package || ''}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
       )}
     </div>
   );
-}
+});
+
+export default ProductSelector;

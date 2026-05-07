@@ -1,12 +1,11 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import Shell from '@/components/Shell';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useMemo } from 'react';
 import ProductSelector from '@/components/ProductSelector';
 import ProductDisplay from '@/components/ProductDisplay';
 
@@ -111,26 +110,24 @@ function SalesEntryContent() {
     init();
   }, [editId]);
 
-  const handleProductSelect = async (index: number, productId: number | string) => {
+  const handleProductSelect = React.useCallback(async (index: number, productId: number | string) => {
     if (!canEdit) return;
     const newItems = [...items];
     const prod = products.find(p => p.id?.toString() === productId?.toString());
     
     if (!prod) return;
 
-    const productCode = prod.product_code || '';
+    const productCode = prod.product_code || (prod as any).code || '';
     const item = { 
       ...newItems[index], 
       product_id: prod.id,
       product_code: productCode,
-      qty: newItems[index].qty || 1 // default to 1 if empty
+      qty: newItems[index].qty || 1
     };
     
-    // Get stock
     const stock = stocks.find(s => s.product_code === productCode)?.stock_qty || 0;
     item.current_stock = stock;
 
-    // Get current price from view
     const { data: priceData } = await supabase
       .from('v_customer_product_current_prices')
       .select('price')
@@ -155,7 +152,7 @@ function SalesEntryContent() {
     item.amount = net + vat;
     newItems[index] = item;
     setItems(newItems);
-  };
+  }, [canEdit, items, products, stocks, header.customer_code]);
 
   const handleItemChange = (index: number, field: keyof SalesItem, value: any) => {
     if (!canEdit) return;
