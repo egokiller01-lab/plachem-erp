@@ -99,7 +99,13 @@ function SalesEntryContent() {
         if (itemError) { alert('Failed to load items'); setInitialLoading(false); return; }
         setItems(itemData || []);
 
-        const { data: reqData } = await supabase.from('credit_exception_requests').select('*').eq('sales_header_id', editId).order('created_at', { ascending: false }).limit(1).single();
+        const { data: reqData } = await supabase
+          .from('credit_exception_requests')
+          .select('*')
+          .eq('sales_header_id', editId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         setCreditRequest(reqData || null);
       } else {
         setItems([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, unit_price: 0, net_unit_price: 0, vat_rate: 10, net_amount: 0, vat_amount: 0, amount: 0, current_stock: 0, price_source: 'auto', remark: '' }]);
@@ -133,7 +139,7 @@ function SalesEntryContent() {
       .select('price')
       .eq('customer_id', Number(header.customer_id))
       .eq('product_id', Number(productId))
-      .single();
+      .maybeSingle();
 
     if (priceData) {
       item.net_unit_price = priceData.price;
@@ -407,7 +413,7 @@ function SalesEntryContent() {
               Unconfirm (Admin)
             </button>
           )}
-          {editId && !isConfirmed && isManager && (
+          {editId && !isConfirmed && (isAdmin || isManager) && (
             <button type="button" className="btn btn-secondary" onClick={handleConfirmAction} disabled={loading} style={{ padding: '4px 12px', fontSize: '12px' }}>
               Confirm Now
             </button>
