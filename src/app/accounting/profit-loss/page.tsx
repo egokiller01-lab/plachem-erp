@@ -12,15 +12,26 @@ export default function ProfitLossPage() {
   const [summaryData, setSummaryData] = useState<any[]>([]);
   const [productProfit, setProductProfit] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
+    setErrorMessage('');
+
     // 1. Fetch Monthly Summaries (for Trend)
-    const { data: summary } = await supabase.from('v_profit_loss_summary').select('*').order('yyyymm', { ascending: true });
+    const { data: summary, error: summaryError } = await supabase.from('v_profit_loss_summary').select('*').order('yyyymm', { ascending: true });
+    if (summaryError) {
+      console.error('Failed to fetch profit/loss summary:', summaryError);
+      setErrorMessage(`손익 요약 데이터를 불러오지 못했습니다: ${summaryError.message}`);
+    }
     setSummaryData(summary || []);
 
     // 2. Fetch Product Profitability (Filtered by some logic or total)
-    const { data: products } = await supabase.from('v_product_profitability').select('*').order('gross_profit', { ascending: false });
+    const { data: products, error: productsError } = await supabase.from('v_product_profitability').select('*').order('gross_profit', { ascending: false });
+    if (productsError) {
+      console.error('Failed to fetch product profitability:', productsError);
+      setErrorMessage(prev => [prev, `제품별 수익성 데이터를 불러오지 못했습니다: ${productsError.message}`].filter(Boolean).join('\n'));
+    }
     setProductProfit(products || []);
     
     setLoading(false);
@@ -65,6 +76,10 @@ export default function ProfitLossPage() {
           />
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="alert alert-danger mb-24" style={{ whiteSpace: 'pre-wrap' }}>{errorMessage}</div>
+      )}
 
       <div className="grid-cols-6" style={{ gap: '12px', marginBottom: '32px' }}>
         <div className="card" style={{ borderTop: '4px solid var(--primary)', padding: '16px' }}>
