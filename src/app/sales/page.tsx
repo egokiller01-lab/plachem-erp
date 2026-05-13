@@ -116,23 +116,40 @@ function SalesEntryContent() {
     init();
   }, [editId]);
 
+  const recalculateSalesItem = (item: SalesItem): SalesItem => {
+    const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
+    const vat = net * ((Number(item.vat_rate) || 0) / 100);
+    return {
+      ...item,
+      net_amount: net,
+      vat_amount: vat,
+      amount: net + vat,
+    };
+  };
+
   const handleProductSelect = React.useCallback(async (index: number, productId: number | string) => {
     if (!canEdit) return;
-    const newItems = [...items];
     const prod = products.find(p => p.id?.toString() === productId?.toString());
-    
     if (!prod) return;
 
     const productCode = prod.product_code || (prod as any).code || '';
-    const item = { 
-      ...newItems[index], 
-      product_id: prod.id,
-      product_code: productCode,
-      qty: newItems[index].qty || 1
-    };
-    
     const stock = stocks.find(s => s.product_code === productCode)?.stock_qty || 0;
-    item.current_stock = stock;
+
+    // Apply the selected product immediately so quick user input cannot overwrite product_id with stale state.
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const current = newItems[index];
+      if (!current) return prevItems;
+      newItems[index] = recalculateSalesItem({
+        ...current,
+        product_id: prod.id,
+        product_code: productCode,
+        qty: current.qty || 1,
+        current_stock: stock,
+        moving_avg_cost: prod.moving_avg_cost || 0,
+      });
+      return newItems;
+    });
 
     const { data: priceData } = await supabase
       .from('v_customer_product_current_prices')
@@ -141,44 +158,38 @@ function SalesEntryContent() {
       .eq('product_id', Number(productId))
       .maybeSingle();
 
-    if (priceData) {
-      item.net_unit_price = priceData.price;
-      item.price_source = 'auto';
-    } else {
-      item.net_unit_price = 0;
-      item.price_source = 'manual';
-    }
-
-    item.moving_avg_cost = prod.moving_avg_cost || 0;
-
-    const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
-    const vat = net * ((Number(item.vat_rate) || 0) / 100);
-    item.net_amount = net;
-    item.vat_amount = vat;
-    item.amount = net + vat;
-    newItems[index] = item;
-    setItems(newItems);
-  }, [canEdit, items, products, stocks, header.customer_id]);
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const current = newItems[index];
+      if (!current || current.product_id?.toString() !== productId.toString()) return prevItems;
+      newItems[index] = recalculateSalesItem({
+        ...current,
+        net_unit_price: priceData?.price || 0,
+        price_source: priceData ? 'auto' : 'manual',
+      });
+      return newItems;
+    });
+  }, [canEdit, products, stocks, header.customer_id]);
 
   const handleItemChange = (index: number, field: keyof SalesItem, value: any) => {
     if (!canEdit) return;
-    const newItems = [...items];
-    const item = { ...newItems[index], [field]: value };
-    
-    if (field === 'net_unit_price') {
-      item.price_source = 'manual';
-    }
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const current = newItems[index];
+      if (!current) return prevItems;
+      let item = { ...current, [field]: value };
+      
+      if (field === 'net_unit_price') {
+        item.price_source = 'manual';
+      }
 
-    if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate') {
-      const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
-      const vat = net * ((Number(item.vat_rate) || 0) / 100);
-      item.net_amount = net;
-      item.vat_amount = vat;
-      item.amount = net + vat;
-    }
-    
-    newItems[index] = item;
-    setItems(newItems);
+      if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate') {
+        item = recalculateSalesItem(item);
+      }
+      
+      newItems[index] = item;
+      return newItems;
+    });
   };
 
   const handleAddItem = () => {
