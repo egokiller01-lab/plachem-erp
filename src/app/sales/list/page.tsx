@@ -40,13 +40,19 @@ export default function SalesListPage() {
   };
 
   const handleConfirm = async (id: number) => {
-    if (!confirm('Are you sure you want to confirm this document?')) return;
+    if (!confirm('매출을 확정하시겠습니까? 확정 시 재고 트랜잭션이 발생하며 수정이 제한됩니다.')) return;
     try {
-      const { error } = await supabase.from('sales_headers').update({ status: 'confirmed' }).eq('id', id);
+      const { data, error } = await supabase.rpc('confirm_sales_document', { p_doc_id: id });
       if (error) throw error;
+      if (data && !data.success) {
+        alert('확정 실패: ' + (data.message || '알 수 없는 오류가 발생했습니다.'));
+        return;
+      }
+      alert(data?.message || '매출이 성공적으로 확정되었습니다.');
       fetchSales();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert('System error: ' + (err?.message || err));
     }
   };
 
