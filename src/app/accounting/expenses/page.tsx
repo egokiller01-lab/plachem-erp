@@ -85,7 +85,9 @@ export default function ExpensesPage() {
       res = await supabase.rpc('unconfirm_expense_document', { p_doc_id: id, p_reason: reason });
     }
 
-    if (res.data?.success) {
+    if (res.error) {
+      alert('System error: ' + res.error.message);
+    } else if (res.data?.success) {
       alert(res.data.message);
       fetchBaseData();
     } else {

@@ -109,13 +109,13 @@ export default function AccountsPayablePage() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <span style={{ fontSize: '13px', color: '#64748B', alignSelf: 'center', marginRight: '8px' }}>Type:</span>
-            {['all', 'PRODUCTION_SUBCON', 'PURCHASE'].map(t => (
+            {['all', 'PURCHASE', 'PRODUCTION_SUBCON', 'EXPENSE'].map(t => (
               <button 
                 key={t} 
                 className={`btn btn-sm ${typeFilter === t ? 'btn-secondary' : 'btn-ghost'}`}
                 onClick={() => setTypeFilter(t)}
               >
-                {t === 'all' ? '전체' : t === 'PURCHASE' ? '매입' : '외주'}
+                {t === 'all' ? '전체' : t === 'PURCHASE' ? '매입' : t === 'EXPENSE' ? '판관비' : '외주'}
               </button>
             ))}
           </div>
@@ -161,11 +161,11 @@ export default function AccountsPayablePage() {
                       fontSize: '11px', 
                       padding: '2px 6px', 
                       borderRadius: '4px', 
-                      backgroundColor: ap.ref_type === 'PURCHASE' ? '#E0E7FF' : '#F3E8FF',
-                      color: ap.ref_type === 'PURCHASE' ? '#4338CA' : '#7E22CE',
+                      backgroundColor: ap.ref_type === 'PURCHASE' ? '#E0E7FF' : ap.ref_type === 'EXPENSE' ? '#DCFCE7' : '#F3E8FF',
+                      color: ap.ref_type === 'PURCHASE' ? '#4338CA' : ap.ref_type === 'EXPENSE' ? '#166534' : '#7E22CE',
                       fontWeight: '600'
                     }}>
-                      {ap.ref_type === 'PURCHASE' ? '매입' : '외주'}
+                      {ap.ref_type === 'PURCHASE' ? '매입' : ap.ref_type === 'EXPENSE' ? '판관비' : '외주'}
                     </span>
                   </td>
                   <td>[{ap.customers.customer_code}] {ap.customers.customer_name}</td>
