@@ -101,33 +101,48 @@ function PurchaseEntryContent() {
     setItems(newItems);
   };
 
+  const recalculatePurchaseItem = (item: PurchaseItem): PurchaseItem => {
+    const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
+    const vat = net * ((Number(item.vat_rate) || 0) / 100);
+    return {
+      ...item,
+      net_amount: net,
+      vat_amount: vat,
+      amount: net + vat,
+    };
+  };
+
   const handleItemChange = (index: number, field: keyof PurchaseItem, value: any) => {
     if (!canEdit) return;
-    const newItems = [...items];
-    const prod = products.find(p => p.id?.toString() === value?.toString());
-    
-    if (field === 'product_code') {
-      if (!prod) return;
-      newItems[index] = { 
-        ...newItems[index], 
-        product_id: prod.id,
-        product_code: prod.product_code || '',
-        qty: newItems[index].qty || 1
-      };
-    } else {
-      newItems[index] = { ...newItems[index], [field]: value };
-    }
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      const current = newItems[index];
+      if (!current) return prevItems;
 
-    const item = newItems[index];
-    if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate' || field === 'product_code') {
-      const net = (Number(item.qty) || 0) * (Number(item.net_unit_price) || 0);
-      const vat = net * ((Number(item.vat_rate) || 0) / 100);
-      item.net_amount = net;
-      item.vat_amount = vat;
-      item.amount = net + vat;
-    }
-    
-    setItems(newItems);
+      const prod = field === 'product_code'
+        ? products.find(p => p.id?.toString() === value?.toString())
+        : null;
+
+      let item: PurchaseItem;
+      if (field === 'product_code') {
+        if (!prod) return prevItems;
+        item = {
+          ...current,
+          product_id: prod.id,
+          product_code: prod.product_code || '',
+          qty: current.qty || 1,
+        };
+      } else {
+        item = { ...current, [field]: value };
+      }
+
+      if (field === 'qty' || field === 'net_unit_price' || field === 'vat_rate' || field === 'product_code') {
+        item = recalculatePurchaseItem(item);
+      }
+
+      newItems[index] = item;
+      return newItems;
+    });
   };
 
   const totalNetAmount = items.reduce((sum, item) => sum + item.net_amount, 0);
@@ -138,7 +153,7 @@ function PurchaseEntryContent() {
     e.preventDefault();
     if (!canEdit) return;
     if (!header.customer_id) return alert('Please select a supplier.');
-    if (items.some(i => !i.product_code || i.qty <= 0)) return alert('Please enter valid product details.');
+    if (items.some(i => !i.product_id || !i.product_code || i.qty <= 0)) return alert('Please enter valid product details.');
 
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
