@@ -152,7 +152,7 @@ function SalesEntryContent() {
     item.amount = net + vat;
     newItems[index] = item;
     setItems(newItems);
-  }, [canEdit, items, products, stocks, header.customer_code]);
+  }, [canEdit, items, products, stocks, header.customer_id]);
 
   const handleItemChange = (index: number, field: keyof SalesItem, value: any) => {
     if (!canEdit) return;

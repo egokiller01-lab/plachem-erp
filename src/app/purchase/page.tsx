@@ -96,6 +96,7 @@ function PurchaseEntryContent() {
   };
 
   const handleRemoveItem = (index: number) => {
+    if (!canEdit) return;
     const newItems = items.filter((_, i) => i !== index).map((item, idx) => ({ ...item, line_no: idx + 1 }));
     setItems(newItems);
   };
@@ -241,7 +242,7 @@ function PurchaseEntryContent() {
   };
 
   const handleConfirmAction = async () => {
-    if (!editId || !isManager) return;
+    if (!editId || (!isAdmin && !isManager)) return;
     if (!confirm('매입 확정 시 재고와 원가에 즉시 반영되며 이후 수정이 제한됩니다. 계속하시겠습니까?')) return;
     
     setLoading(true);
@@ -309,7 +310,7 @@ function PurchaseEntryContent() {
               Unconfirm (Admin)
             </button>
           )}
-          {editId && !isConfirmed && isManager && (
+          {editId && !isConfirmed && (isAdmin || isManager) && (
             <button type="button" className="btn btn-secondary" onClick={handleConfirmAction} disabled={loading} style={{ padding: '4px 12px', fontSize: '12px' }}>
               Confirm Now
             </button>
