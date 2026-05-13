@@ -64,7 +64,7 @@ export default function AccountsPayablePage() {
 
   useEffect(() => {
     fetchApList();
-  }, [statusFilter]);
+  }, [statusFilter, typeFilter]);
 
   const handleOpenPayment = (ap: AccountsPayable) => {
     setSelectedAp(ap);
@@ -152,7 +152,7 @@ export default function AccountsPayablePage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center' }}>Loading...</td></tr>
               ) : apList.map(ap => (
                 <tr key={ap.id}>
                   <td>{ap.doc_date}</td>
