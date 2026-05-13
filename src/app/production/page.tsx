@@ -84,7 +84,15 @@ function ProductionEntryContent() {
     if (editId) {
       const { data: headData, error: headError } = await supabase.from('production_headers').select('*').eq('id', editId).single();
       if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
-      setHeader(headData);
+      setHeader(prev => ({
+        ...prev,
+        ...headData,
+        vendor_id: headData.vendor_id ? String(headData.vendor_id) : '',
+        production_type: headData.production_type || 'INTERNAL',
+        processing_fee: headData.processing_fee || 0,
+        additional_cost: headData.additional_cost || 0,
+        is_additional_cost_payable: headData.is_additional_cost_payable ?? true,
+      }));
 
       const { data: inData } = await supabase.from('production_inputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
       setInputs(inData || []);
@@ -189,9 +197,11 @@ function ProductionEntryContent() {
 
       // 최종 합산된 결과를 inputs에 반영
       const aggregatedInputs: ProductionItem[] = Object.values(allInputMovements).map((item, idx) => {
+        const prod = products.find(p => p.product_code === item.product_code);
         const stock = stocks.find(s => s.product_code === item.product_code)?.stock_qty || 0;
         return {
           line_no: idx + 1,
+          product_id: prod?.id,
           product_code: item.product_code,
           qty: item.qty,
           remark: `BOM auto-calc merged`,
@@ -212,14 +222,44 @@ function ProductionEntryContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) return;
+
+    if (!header.production_no.trim()) return alert('Please enter a production number.');
+
+    const validInputs = inputs.filter(i => i.product_id && Number(i.qty) > 0);
+    const validOutputs = outputs.filter(o => o.product_id && Number(o.qty) > 0);
+    if (validInputs.length === 0) return alert('Please enter at least one valid material input.');
+    if (validOutputs.length === 0) return alert('Please enter at least one valid product output.');
+    if (inputs.some(i => (i.product_id || Number(i.qty) > 0) && (!i.product_id || Number(i.qty) <= 0))) return alert('Please enter valid material input details.');
+    if (outputs.some(o => (o.product_id || Number(o.qty) > 0) && (!o.product_id || Number(o.qty) <= 0))) return alert('Please enter valid product output details.');
+
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
 
     // 1. Save/Update Header
-    const headPayload = { ...header, created_by: userData.user?.id };
-    const { data: headData, error: headError } = editId 
-      ? await supabase.from('production_headers').update(headPayload).eq('id', editId).select().single()
-      : await supabase.from('production_headers').insert([headPayload]).select().single();
+    const baseHeadPayload = {
+      production_no: header.production_no.trim(),
+      production_date: header.production_date,
+      status: header.status,
+      remark: header.remark,
+      created_by: userData.user?.id,
+      is_additional_cost_payable: header.is_additional_cost_payable,
+    };
+    const extendedHeadPayload = {
+      ...baseHeadPayload,
+      production_type: header.production_type,
+      vendor_id: header.production_type === 'SUBCON' && header.vendor_id ? Number(header.vendor_id) : null,
+      processing_fee: header.production_type === 'SUBCON' ? Number(header.processing_fee) || 0 : 0,
+      additional_cost: Number(header.additional_cost) || 0,
+    };
+
+    const persistHeader = (payload: any) => editId
+      ? supabase.from('production_headers').update(payload).eq('id', editId).select().single()
+      : supabase.from('production_headers').insert([payload]).select().single();
+
+    let { data: headData, error: headError } = await persistHeader(extendedHeadPayload);
+    if (headError && headError.message.includes('schema cache')) {
+      ({ data: headData, error: headError } = await persistHeader(baseHeadPayload));
+    }
 
     if (headError) {
       if (headError.code === '42501') alert('권한이 없거나 확정된 데이터는 수정할 수 없습니다.');
@@ -237,31 +277,43 @@ function ProductionEntryContent() {
     const docId = headData.id;
 
     // 3. Insert Inputs
-    if (inputs.some(i => i.product_code && i.qty > 0)) {
-      await supabase.from('production_inputs').insert(
-        inputs.filter(i => i.product_code && i.qty > 0).map(i => ({
-          production_header_id: docId,
-          line_no: i.line_no,
-          product_code: i.product_code,
-          qty: i.qty,
-          remark: i.remark,
-          created_by: userData.user?.id
-        }))
-      );
+    const rollbackDraftHeader = async () => {
+      await supabase.from('production_inputs').delete().eq('production_header_id', docId);
+      await supabase.from('production_outputs').delete().eq('production_header_id', docId);
+      if (!editId) await supabase.from('production_headers').delete().eq('id', docId);
+    };
+
+    const { error: inputError } = await supabase.from('production_inputs').insert(
+      validInputs.map(i => ({
+        production_header_id: docId,
+        line_no: i.line_no,
+        product_id: Number(i.product_id),
+        qty: Number(i.qty),
+        remark: i.remark
+      }))
+    );
+    if (inputError) {
+      await rollbackDraftHeader();
+      alert('Input save failed: ' + inputError.message);
+      setLoading(false);
+      return;
     }
 
     // 4. Insert Outputs
-    if (outputs.some(o => o.product_code && o.qty > 0)) {
-      await supabase.from('production_outputs').insert(
-        outputs.filter(o => o.product_code && o.qty > 0).map(o => ({
-          production_header_id: docId,
-          line_no: o.line_no,
-          product_code: o.product_code,
-          qty: o.qty,
-          remark: o.remark,
-          created_by: userData.user?.id
-        }))
-      );
+    const { error: outputError } = await supabase.from('production_outputs').insert(
+      validOutputs.map(o => ({
+        production_header_id: docId,
+        line_no: o.line_no,
+        product_id: Number(o.product_id),
+        qty: Number(o.qty),
+        remark: o.remark
+      }))
+    );
+    if (outputError) {
+      await rollbackDraftHeader();
+      alert('Output save failed: ' + outputError.message);
+      setLoading(false);
+      return;
     }
 
     alert('Saved successfully!');
