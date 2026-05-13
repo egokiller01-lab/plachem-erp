@@ -19,8 +19,10 @@ interface ProductSelectorProps {
 const ProductSelector = React.memo(({ products, value, onChange, disabled }: ProductSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // Close on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -30,6 +32,20 @@ const ProductSelector = React.memo(({ products, value, onChange, disabled }: Pro
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close on scroll or resize to prevent position drift
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleScrollOrResize() {
+      setIsOpen(false);
+    }
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen]);
 
   const selectedProduct = products.find(p => p.id?.toString() === value?.toString()) || null;
 
@@ -57,7 +73,14 @@ const ProductSelector = React.memo(({ products, value, onChange, disabled }: Pro
           fontSize: '13px',
           border: '1px solid var(--border-color)'
         }}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (disabled) return;
+          if (!isOpen && wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+          }
+          setIsOpen(!isOpen);
+        }}
       >
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: selectedProduct ? 'var(--text-main)' : '#9ca3af' }}>
           {selectedProduct 
@@ -69,16 +92,14 @@ const ProductSelector = React.memo(({ products, value, onChange, disabled }: Pro
 
       {isOpen && (
         <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          zIndex: 1000,
+          position: 'fixed',
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          zIndex: 9999,
           backgroundColor: '#fff',
           border: '1px solid var(--border-color)',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           borderRadius: '4px',
-          marginTop: '4px',
           maxHeight: '250px',
           display: 'flex',
           flexDirection: 'column',
@@ -134,5 +155,7 @@ const ProductSelector = React.memo(({ products, value, onChange, disabled }: Pro
     </div>
   );
 });
+
+ProductSelector.displayName = "ProductSelector";
 
 export default ProductSelector;

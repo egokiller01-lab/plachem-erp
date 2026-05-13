@@ -38,7 +38,7 @@ function PurchaseEntryContent() {
   const [header, setHeader] = useState<{
     purchase_no: string;
     purchase_date: string;
-    supplier_id: string;
+    customer_id: string;
     status: string;
     attachment_url: string;
     remark: string;
@@ -47,7 +47,7 @@ function PurchaseEntryContent() {
   }>({
     purchase_no: '',
     purchase_date: new Date().toISOString().split('T')[0],
-    supplier_id: '',
+    customer_id: '',
     status: 'draft',
     attachment_url: '',
     remark: '',
@@ -74,7 +74,10 @@ function PurchaseEntryContent() {
       if (editId) {
         const { data: headData, error: headError } = await supabase.from('purchase_headers').select('*').eq('id', editId).single();
         if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
-        setHeader(headData);
+        setHeader({
+          ...headData,
+          customer_id: headData.customer_id ? String(headData.customer_id) : ''
+        });
 
         const { data: itemData, error: itemError } = await supabase.from('purchase_items').select('*').eq('purchase_header_id', editId).order('line_no', { ascending: true });
         if (itemError) { alert('Failed to load items'); setInitialLoading(false); return; }
@@ -133,7 +136,7 @@ function PurchaseEntryContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) return;
-    if (!header.supplier_id) return alert('Please select a supplier.');
+    if (!header.customer_id) return alert('Please select a supplier.');
     if (items.some(i => !i.product_code || i.qty <= 0)) return alert('Please enter valid product details.');
 
     setLoading(true);
@@ -143,15 +146,26 @@ function PurchaseEntryContent() {
 
     if (editId) {
       // Update Header
+      const updatePayload: any = {
+        purchase_date: header.purchase_date,
+        customer_id: header.customer_id ? Number(header.customer_id) : null,
+        status: header.status,
+        attachment_url: header.attachment_url,
+        remark: header.remark,
+        due_date: header.due_date,
+        total_net_amount: totalNetAmount,
+        total_vat_amount: totalVatAmount,
+        total_amount: totalAmount,
+        updated_at: new Date().toISOString()
+      };
+
+      if (header.purchase_no?.trim()) {
+        updatePayload.purchase_no = header.purchase_no.trim();
+      }
+
       const { error: headError } = await supabase
         .from('purchase_headers')
-        .update({
-          ...header,
-          total_net_amount: totalNetAmount,
-          total_vat_amount: totalVatAmount,
-          total_amount: totalAmount,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', editId);
 
       if (headError) { 
@@ -168,17 +182,26 @@ function PurchaseEntryContent() {
         setLoading(false); return; 
       }
     } else {
-      // Insert Header
+      const purchaseHeaderPayload: any = {
+        purchase_date: header.purchase_date,
+        customer_id: header.customer_id ? Number(header.customer_id) : null,
+        status: header.status,
+        attachment_url: header.attachment_url,
+        remark: header.remark,
+        due_date: header.due_date,
+        total_net_amount: totalNetAmount,
+        total_vat_amount: totalVatAmount,
+        total_amount: totalAmount,
+        created_by: userData.user?.id
+      };
+
+      if (header.purchase_no?.trim()) {
+        purchaseHeaderPayload.purchase_no = header.purchase_no.trim();
+      }
+
       const { data: headData, error: headError } = await supabase
         .from('purchase_headers')
-        .insert([{
-          ...header,
-          purchase_no: header.purchase_no ? header.purchase_no : undefined,
-          total_net_amount: totalNetAmount,
-          total_vat_amount: totalVatAmount,
-          total_amount: totalAmount,
-          created_by: userData.user?.id
-        }])
+        .insert([purchaseHeaderPayload])
         .select()
         .single();
 
@@ -197,7 +220,6 @@ function PurchaseEntryContent() {
         purchase_header_id: headId,
         line_no: item.line_no,
         product_id: item.product_id,
-        product_code: item.product_code,
         qty: item.qty,
         unit_price: item.net_unit_price,
         net_unit_price: item.net_unit_price,
@@ -205,8 +227,7 @@ function PurchaseEntryContent() {
         net_amount: item.net_amount,
         vat_amount: item.vat_amount,
         amount: item.amount,
-        remark: item.remark,
-        created_by: userData.user?.id
+        remark: item.remark
       })));
 
     if (itemError) {
@@ -313,7 +334,7 @@ function PurchaseEntryContent() {
             <div className="grid-cols-2" style={{ gap: '12px' }}>
               <div className="form-group mb-0">
                 <label className="form-label">Supplier *</label>
-                <select className="form-control" value={header.supplier_id} onChange={(e) => setHeader({...header, supplier_id: e.target.value})} required disabled={!canEdit}>
+                <select className="form-control" value={header.customer_id} onChange={(e) => setHeader({...header, customer_id: e.target.value})} required disabled={!canEdit}>
                   <option value="">Select Supplier</option>
                   {customers.map(c => <option key={c.id} value={c.id}>[{c.customer_code}] {c.customer_name}</option>)}
                 </select>

@@ -131,8 +131,8 @@ function SalesEntryContent() {
     const { data: priceData } = await supabase
       .from('v_customer_product_current_prices')
       .select('price')
-      .eq('customer_code', header.customer_code)
-      .eq('product_code', productCode)
+      .eq('customer_id', Number(header.customer_id))
+      .eq('product_id', Number(productId))
       .single();
 
     if (priceData) {
@@ -205,20 +205,25 @@ function SalesEntryContent() {
 
     if (editId) {
       // Update Header
+      const updatePayload: any = {
+        sales_date: header.sales_date,
+        customer_id: header.customer_id ? Number(header.customer_id) : null,
+        status: header.status,
+        attachment_url: header.attachment_url,
+        remark: header.remark,
+        total_net_amount: totalNetAmount,
+        total_vat_amount: totalVatAmount,
+        total_amount: totalAmount,
+        updated_at: new Date().toISOString()
+      };
+
+      if (header.sales_no?.trim()) {
+        updatePayload.sales_no = header.sales_no.trim();
+      }
+
       const { error: headError } = await supabase
         .from('sales_headers')
-        .update({
-          sales_no: header.sales_no,
-          sales_date: header.sales_date,
-          customer_id: header.customer_id ? Number(header.customer_id) : null,
-          status: header.status,
-          attachment_url: header.attachment_url,
-          remark: header.remark,
-          total_net_amount: totalNetAmount,
-          total_vat_amount: totalVatAmount,
-          total_amount: totalAmount,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', editId);
 
       if (headError) { 
@@ -236,20 +241,25 @@ function SalesEntryContent() {
       }
     } else {
       // Insert Header
+      const salesHeaderPayload: any = {
+        sales_date: header.sales_date,
+        customer_id: header.customer_id ? Number(header.customer_id) : null,
+        status: header.status,
+        attachment_url: header.attachment_url,
+        remark: header.remark,
+        total_net_amount: totalNetAmount,
+        total_vat_amount: totalVatAmount,
+        total_amount: totalAmount,
+        created_by: userData.user?.id
+      };
+
+      if (header.sales_no?.trim()) {
+        salesHeaderPayload.sales_no = header.sales_no.trim();
+      }
+
       const { data: headData, error: headError } = await supabase
         .from('sales_headers')
-        .insert([{
-          sales_no: header.sales_no ? header.sales_no : undefined,
-          sales_date: header.sales_date,
-          customer_id: header.customer_id ? Number(header.customer_id) : null,
-          status: header.status,
-          attachment_url: header.attachment_url,
-          remark: header.remark,
-          total_net_amount: totalNetAmount,
-          total_vat_amount: totalVatAmount,
-          total_amount: totalAmount,
-          created_by: userData.user?.id
-        }])
+        .insert([salesHeaderPayload])
         .select()
         .single();
 
@@ -268,7 +278,6 @@ function SalesEntryContent() {
         sales_header_id: headId,
         line_no: item.line_no,
         product_id: item.product_id,
-        product_code: item.product_code,
         qty: item.qty,
         unit_price: item.net_unit_price,
         net_unit_price: item.net_unit_price,
@@ -276,9 +285,7 @@ function SalesEntryContent() {
         net_amount: item.net_amount,
         vat_amount: item.vat_amount,
         amount: item.amount,
-        price_source: item.price_source,
-        remark: item.remark,
-        created_by: userData.user?.id
+        remark: item.remark
       })));
 
     if (itemError) {

@@ -72,33 +72,34 @@ function ProductionEntryContent() {
     { line_no: 1, product_code: '', qty: 0, remark: '' }
   ]);
 
+  const fetchProductionData = async () => {
+    setInitialLoading(true);
+    const { data: prodData } = await supabase.from('products').select('*').eq('status', 'active');
+    const { data: stockData } = await supabase.from('v_product_stock').select('*');
+    const { data: custData } = await supabase.from('customers').select('*').eq('status', 'active');
+    setProducts(prodData || []);
+    setStocks(stockData || []);
+    setCustomers(custData || []);
+
+    if (editId) {
+      const { data: headData, error: headError } = await supabase.from('production_headers').select('*').eq('id', editId).single();
+      if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
+      setHeader(headData);
+
+      const { data: inData } = await supabase.from('production_inputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
+      setInputs(inData || []);
+
+      const { data: outData } = await supabase.from('production_outputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
+      setOutputs(outData || []);
+    } else {
+      setInputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', current_stock: 0, unit_cost: 0 }]);
+      setOutputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', unit_cost: 0 }]);
+    }
+    setInitialLoading(false);
+  };
+
   useEffect(() => {
-    const init = async () => {
-      setInitialLoading(true);
-      const { data: prodData } = await supabase.from('products').select('*').eq('status', 'active');
-      const { data: stockData } = await supabase.from('v_product_stock').select('*');
-      const { data: custData } = await supabase.from('customers').select('*').eq('status', 'active');
-      setProducts(prodData || []);
-      setStocks(stockData || []);
-      setCustomers(custData || []);
-
-      if (editId) {
-        const { data: headData, error: headError } = await supabase.from('production_headers').select('*').eq('id', editId).single();
-        if (headError) { alert('Failed to load header'); setInitialLoading(false); return; }
-        setHeader(headData);
-
-        const { data: inData } = await supabase.from('production_inputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
-        setInputs(inData || []);
-
-        const { data: outData } = await supabase.from('production_outputs').select('*').eq('production_header_id', editId).order('line_no', { ascending: true });
-        setOutputs(outData || []);
-      } else {
-        setInputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', current_stock: 0, unit_cost: 0 }]);
-        setOutputs([{ line_no: 1, product_id: undefined, product_code: '', qty: 0, remark: '', unit_cost: 0 }]);
-      }
-      setInitialLoading(false);
-    };
-    init();
+    fetchProductionData();
   }, [editId]);
 
   const handleInputProductSelect = (index: number, productId: string | number) => {
