@@ -211,6 +211,7 @@ function SalesEntryContent() {
     e.preventDefault();
     if (!canEdit) return;
     if (!header.customer_id) return alert('Please select a customer.');
+    if (items.some(i => !i.product_id || !i.product_code || i.qty <= 0)) return alert('Please enter valid product details.');
     if (items.some(i => i.qty > i.current_stock)) {
       if (!confirm('Some items are low on stock. Do you want to proceed?')) return;
     }
