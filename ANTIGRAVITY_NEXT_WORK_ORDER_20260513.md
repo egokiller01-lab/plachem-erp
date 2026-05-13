@@ -9,8 +9,10 @@ Remote `origin/main` currently includes:
 - `bc6f569 fix: replace BOM BigInt literals for typecheck compatibility`
 - `35ad6c7 docs: add 2026-05-12 ERP stabilization log`
 
-OpenClaw server also has a local follow-up commit not pushed yet:
+OpenClaw server also has local follow-up commits not pushed yet:
 - `d52db58 fix: align draft entry permissions and price lookup`
+- `9a45a25 docs: add ERP confirm flow verification work order`
+- `d13a517 fix: stabilize sales confirm UI and optional lookups`
 
 ## Scope
 Diagnosis and verification first. Do not modify SQL/RLS. Do not run additional database migrations unless Kim approves explicitly.
