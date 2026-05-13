@@ -14,7 +14,8 @@ export default function CashTrendReportPage() {
 
   const fetchTrendData = async (type: string) => {
     setLoading(true);
-    const { data, error } = await supabase.rpc('get_cash_trend_report', { p_type: type, p_limit: 8 });
+    const rpcType = type === 'monthly' ? 'month' : 'week';
+    const { data, error } = await supabase.rpc('get_cash_trend_report', { p_type: rpcType, p_limit: 8 });
     if (error) {
       alert('Failed to load trend data: ' + error.message);
     } else if (data && data.success) {
