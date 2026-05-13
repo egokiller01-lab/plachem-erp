@@ -87,7 +87,7 @@ export default function BOMManagementPage() {
       is_active: bomHeaders.length === 0,
       remark: '',
     });
-    setItemForm([{ component_product_id: 0n, standard_qty: 0, remark: '' }]);
+    setItemForm([{ component_product_id: BigInt(0), standard_qty: 0, remark: '' }]);
     setShowForm(true);
   };
 
@@ -114,7 +114,7 @@ export default function BOMManagementPage() {
   };
 
   const handleAddItem = () => {
-    setItemForm([...itemForm, { component_product_id: 0n, standard_qty: 0, remark: '' }]);
+    setItemForm([...itemForm, { component_product_id: BigInt(0), standard_qty: 0, remark: '' }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -165,7 +165,7 @@ export default function BOMManagementPage() {
       }
 
       // Insert Items
-      const validItems = itemForm.filter(i => i.component_product_id !== 0n && i.standard_qty > 0);
+      const validItems = itemForm.filter(i => i.component_product_id !== BigInt(0) && i.standard_qty > 0);
       if (validItems.length > 0) {
         await supabase.from('bom_items').insert(validItems.map(i => ({
           bom_header_id: headerId,
